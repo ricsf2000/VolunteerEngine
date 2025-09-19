@@ -1,0 +1,45 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { SidebarLink } from "@/components/SidebarLink";
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+
+  const isActive = (path: string) => pathname === path;
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <div className="bg-black w-64 p-6">
+        <h3 className="px-4 py-2 font-bold mb-4">
+          Volunteer<span className="text-green-500">Engine</span>
+        </h3>
+        <nav className="space-y-2">
+          <SidebarLink href="/admin" isActive={isActive("/admin")} activeColor="green">
+            Dashboard
+          </SidebarLink>
+          <SidebarLink href="/admin/notifications" isActive={isActive("/admin/notifications")} activeColor="green">
+            Notifications
+          </SidebarLink>
+          <SidebarLink href="/admin/events" isActive={isActive("/admin/events")} activeColor="green">
+            Events
+          </SidebarLink>
+          <SidebarLink href="/admin/volunteers" isActive={isActive("/admin/volunteers")} activeColor="green">
+            Volunteers
+          </SidebarLink>
+          <SidebarLink href="/admin/volunteer-matching" isActive={isActive("/admin/volunteer-matching")} activeColor="green">
+            Volunteer Matching
+          </SidebarLink>
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 p-8">{children}</div>
+    </div>
+  );
+}
