@@ -10,7 +10,12 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === "/admin/events" && (pathname === "/admin" || pathname === "/admin/events")) {
+      return true;
+    }
+    return pathname === path;
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -20,14 +25,11 @@ export default function AdminLayout({
           Volunteer<span className="text-green-500">Engine</span>
         </h3>
         <nav className="space-y-2">
-          <SidebarLink href="/admin" isActive={isActive("/admin")} activeColor="green">
-            Dashboard
+          <SidebarLink href="/admin/events" isActive={isActive("/admin/events")} activeColor="green">
+            Events
           </SidebarLink>
           <SidebarLink href="/admin/notifications" isActive={isActive("/admin/notifications")} activeColor="green">
             Notifications
-          </SidebarLink>
-          <SidebarLink href="/admin/events" isActive={isActive("/admin/events")} activeColor="green">
-            Events
           </SidebarLink>
           <SidebarLink href="/admin/volunteers" isActive={isActive("/admin/volunteers")} activeColor="green">
             Volunteers
