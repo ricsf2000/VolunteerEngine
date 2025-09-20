@@ -4,7 +4,7 @@ export default function NewEvent() {
       <h1 className="text-3xl font-bold mb-6">New Event</h1>
       
       <div className="space-y-4">
-        <p>TODO: Implement this</p>
+        <p>TODO: Implement this-Oscar</p>
         <p>Event Name (100 characters, required)</p>
         <p>Event Description (Text area, required)</p>
         <p>Location (Text area, required)</p>
