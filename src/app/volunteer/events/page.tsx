@@ -4,7 +4,7 @@ export default function VolunteerEvents() {
       <h1 className="text-3xl font-bold mb-6">Events</h1>
       
       <div className="space-y-4">
-        <p>TODO: Implement this</p>
+        <p>TODO: Implement this - Randdy</p>
       </div>
     </div>
   );
