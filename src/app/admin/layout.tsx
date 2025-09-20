@@ -31,8 +31,8 @@ export default function AdminLayout({
           <SidebarLink href="/admin/notifications" isActive={isActive("/admin/notifications")} activeColor="green">
             Notifications
           </SidebarLink>
-          <SidebarLink href="/admin/volunteers" isActive={isActive("/admin/volunteers")} activeColor="green">
-            Volunteers
+          <SidebarLink href="/admin/volunteer-history" isActive={isActive("/admin/volunteer-history")} activeColor="green">
+            Volunteer History
           </SidebarLink>
           <SidebarLink href="/admin/volunteer-matching" isActive={isActive("/admin/volunteer-matching")} activeColor="green">
             Volunteer Matching
