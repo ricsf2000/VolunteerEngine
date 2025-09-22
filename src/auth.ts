@@ -57,12 +57,15 @@ export const { auth, signIn, signOut } = NextAuth({
               expectedRole = 'volunteer';
             }
           }
-          
-          const user = await getUser(email, expectedRole);
-          if (!user) return null;
-          // const passwordsMatch = await bcrypt.compare(password, user.password); // Uncomment when backend is implemented
-          const passwordsMatch = true; // Dummy - any password works for now
 
+          // Uncomment below when backend is implemented
+          // const user = await getUser(email, expectedRole);
+          // if (!user) return null;
+          // const passwordsMatch = await bcrypt.compare(password, user.password); 
+          const hard_coded_email = expectedRole === 'admin' ? 'admin@test.com' : 'volunteer@test.com';
+          const user = await getUser(hard_coded_email, expectedRole);
+          
+          const passwordsMatch = true; // Dummy - any password works for now
           if (passwordsMatch) return user;
         }
  
