@@ -234,11 +234,11 @@ const getCardColors = (isRead: boolean, userRole: userRole) =>
 {
   if (isRead) 
   {
-    return 'border-l-gray-600 bg-gray-800/50';
+    return 'border-l-gray-600 bg-black/50';
   }
   return userRole === 'volunteer' 
-    ? 'border-l-blue-500 bg-gray-800'
-    : 'border-l-green-500 bg-gray-800';
+    ? 'border-l-blue-500 bg-black/30'
+    : 'border-l-green-500 bg-black/30';
 };
 
 // helper func for icon colors
@@ -398,7 +398,7 @@ export default function notifications({ userRole }: notificationsProps)
       </div>
 
       {/* filter buttons */}
-      <div className="flex items-center justify-between mb-6 bg-gray-800 rounded-lg shadow-sm p-4">
+      <div className="flex items-center justify-between mb-6 bg-black/30 rounded-lg shadow-sm p-4">
         <div className="flex gap-2">
           <button
             onClick={() => setCurrentFilter('all')}
