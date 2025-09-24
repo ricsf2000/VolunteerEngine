@@ -234,11 +234,11 @@ const getCardColors = (isRead: boolean, userRole: userRole) =>
 {
   if (isRead) 
   {
-    return 'border-l-gray-600 bg-gray-800/50';
+    return 'border-l-gray-600 card bg-black/50';
   }
   return userRole === 'volunteer' 
-    ? 'border-l-blue-500 bg-gray-800'
-    : 'border-l-green-500 bg-gray-800';
+    ? 'border-l-blue-500 card'
+    : 'border-l-green-500 card';
 };
 
 // helper func for icon colors
@@ -398,7 +398,7 @@ export default function notifications({ userRole }: notificationsProps)
       </div>
 
       {/* filter buttons */}
-      <div className="flex items-center justify-between mb-6 bg-gray-800 rounded-lg shadow-sm p-4">
+      <div className="flex items-center justify-between mb-6 card rounded-lg shadow-sm p-4">
         <div className="flex gap-2">
           <button
             onClick={() => setCurrentFilter('all')}
@@ -438,7 +438,7 @@ export default function notifications({ userRole }: notificationsProps)
       {/* notifs list */}
       <div className="space-y-4">
         {filteredNotifications.length === 0 ? (
-          <div className="text-center py-12 bg-gray-800 rounded-lg shadow-sm">
+          <div className="text-center py-12 card rounded-lg shadow-sm">
             <Bell className="w-12 h-12 text-gray-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-200 mb-2">No notifications found</h3>
             <p className="text-gray-400">
