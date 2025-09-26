@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SidebarLink } from "@/components/SidebarLink";
+import { SignOutButton } from "@/components/SignOutButton";
 
 export default function AdminLayout({
   children,
@@ -20,7 +21,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <div className="bg-black w-64 p-6">
+      <div className="bg-black w-64 p-6 flex flex-col h-screen fixed left-0 top-0 z-10">
         <h3 className="px-4 py-2 font-bold mb-4">
           Volunteer<span className="text-green-500">Engine</span>
         </h3>
@@ -38,10 +39,13 @@ export default function AdminLayout({
             Volunteer Matching
           </SidebarLink>
         </nav>
+
+        <div className="flex-grow"></div>        
+        <SignOutButton />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">{children}</div>
+      <div className="flex-1 ml-64 p-8 min-h-screen">{children}</div>
     </div>
   );
 }
