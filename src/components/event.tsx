@@ -65,9 +65,9 @@ export default function NewEventModal({ open, onClose }: NewEventModalProps) {
 
 	if (!open) return null;
 	return (
-		<div aria-modal role="dialog" className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
-			<div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-			<div ref={dialogRef} className="relative w-full max-w-2xl rounded-2xl border border-slate-700 bg-[#0d1e22] shadow-2xl ring-1 ring-black/5">
+	    <div aria-modal role="dialog" className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
+		    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+		    <div ref={dialogRef} className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl border border-slate-700 bg-[#0d1e22] shadow-2xl ring-1 ring-black/5">
 				<div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
 					<div className="flex items-center gap-2">
 						<span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-900/40 text-cyan-300">🗓️</span>
@@ -175,7 +175,7 @@ export default function NewEventModal({ open, onClose }: NewEventModalProps) {
 						</div>
 					</div>
 
-					<div className="pt-2">
+					<div className="pt-2 pb-6">
 						<button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-black font-medium">Create Event</button>
 					</div>
 				</form>
