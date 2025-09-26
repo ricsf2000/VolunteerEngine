@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bell, Clock, MapPin, Users, Calendar, CheckCircle, AlertCircle, Info, X, Loader2 } from 'lucide-react';
+import { Loading } from './Loading';
 
 // event info interface
 interface eventInfo 
@@ -234,7 +235,7 @@ const getCardColors = (isRead: boolean, userRole: userRole) =>
 {
   if (isRead) 
   {
-    return 'border-l-gray-600 card bg-black/50';
+    return 'border-l-gray-600 card';
   }
   return userRole === 'volunteer' 
     ? 'border-l-blue-500 card'
@@ -372,10 +373,7 @@ export default function notifications({ userRole }: notificationsProps)
   {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className={`w-8 h-8 animate-spin text-${primaryColor}-400`} />
-          <span className="ml-2 text-gray-400">Loading notifications...</span>
-        </div>
+        <Loading message="Loading notifications" className="py-12" />
       </div>
     );
   }

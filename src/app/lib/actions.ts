@@ -63,7 +63,7 @@ export async function registerUser(
       email,
       password,
       redirect: true,
-      redirectTo: role === 'admin' ? '/admin' : '/volunteer'
+      redirectTo: role === 'admin' ? '/admin' : '/volunteer/profile'
     });
     
   } catch (error) {
