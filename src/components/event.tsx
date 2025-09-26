@@ -16,6 +16,7 @@ const [location, setLocation] = useState("");
 const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
 const [urgency, setUrgency] = useState("");
 const [eventDate, setEventDate] = useState("");
+const [eventTime, setEventTime] = useState("");
 const [errors, setErrors] = useState<Record<string, string>>({});
 const [saved, setSaved] = useState(false);
 
@@ -31,6 +32,7 @@ if (!location.trim()) e.location = "Location is required";
 if (requiredSkills.length === 0) e.requiredSkills = "Select at least one required skill";
 if (!urgency) e.urgency = "Select urgency";
 if (!eventDate) e.eventDate = "Select an event date";
+if (!eventTime) e.eventTime = "Select an event time";
 setErrors(e);
 return Object.keys(e).length === 0;
 };
@@ -40,7 +42,7 @@ const handleSubmit = (e: FormEvent) => {
 e.preventDefault();
 setSaved(false);
 if (!validate()) return;
-const payload = { eventName, description, location, requiredSkills, urgency, eventDate };
+const payload = { eventName, description, location, requiredSkills, urgency, eventDate, eventTime };
 console.log("submit", payload);
 setSaved(true);
 };
@@ -158,15 +160,28 @@ onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value
 	{errors.urgency && <div className="mt-1 text-sm text-rose-400">{errors.urgency}</div>}
 </div>
 
-<div>
-	<label className="mb-1 block text-sm font-medium text-slate-200">Event Date</label>
-	<input
-		type="date"
-		value={eventDate}
-		onChange={(e: ChangeEvent<HTMLInputElement>) => setEventDate(e.target.value)}
-		className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-slate-100 outline-none focus:border-cyan-600"
-	/>
-	{errors.eventDate && <div className="mt-1 text-sm text-rose-400">{errors.eventDate}</div>}
+<div className="grid grid-cols-2 gap-4">
+	<div>
+		<label className="mb-1 block text-sm font-medium text-slate-200">Event Date</label>
+		<input
+			type="date"
+			value={eventDate}
+			onChange={(e: ChangeEvent<HTMLInputElement>) => setEventDate(e.target.value)}
+			className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-slate-100 outline-none focus:border-cyan-600"
+		/>
+		{errors.eventDate && <div className="mt-1 text-sm text-rose-400">{errors.eventDate}</div>}
+	</div>
+
+	<div>
+		<label className="mb-1 block text-sm font-medium text-slate-200">Event Time</label>
+		<input
+			type="time"
+			value={eventTime}
+			onChange={(e: ChangeEvent<HTMLInputElement>) => setEventTime(e.target.value)}
+			className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-slate-100 outline-none focus:border-cyan-600"
+		/>
+		{errors.eventTime && <div className="mt-1 text-sm text-rose-400">{errors.eventTime}</div>}
+	</div>
 </div>
 
 <div className="pt-2">
