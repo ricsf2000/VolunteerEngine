@@ -3,7 +3,7 @@
 :root {
   --background: #041518;
   --foreground: #ededed;
-  --card-background: rgba(0, 0, 0, 0.3);
+  --card-background: rgba(0, 0, 0, 0.428);
 }
 
 body {
