@@ -44,6 +44,3 @@ next-env.d.ts
 *.tmp
 *.temp
 assignment1.txt
-
-# Claude Code settings
-.claude/
