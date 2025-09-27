@@ -1,12 +1,27 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState, ChangeEvent, FormEvent } from "react";
 
+type EventItem = {
+  id: number;
+  fullName: string;
+  eventName: string;
+  description: string;
+  location: string;
+  requiredSkills: string[];
+  urgency: string;
+  eventDate: string;
+  eventTime: string;
+  volunteers: Array<{ id: number; name: string; status: "confirmed" | "pending" }>;
+  maxVolunteers: number;
+};
+
 interface NewEventModalProps {
 	open: boolean;
 	onClose: () => void;
+	editingEvent?: EventItem | null;
 }
 
-export default function NewEventModal({ open, onClose }: NewEventModalProps) {
+export default function NewEventModal({ open, onClose, editingEvent }: NewEventModalProps) {
 	const dialogRef = useRef<HTMLDivElement | null>(null);
 	const [eventName, setEventName] = useState("");
 	const [description, setDescription] = useState("");
@@ -63,6 +78,28 @@ export default function NewEventModal({ open, onClose }: NewEventModalProps) {
 		}
 	}, [open]);
 
+	useEffect(() => {
+		if (editingEvent) {
+			setEventName(editingEvent.eventName);
+			setDescription(editingEvent.description);
+			setLocation(editingEvent.location);
+			setRequiredSkills(editingEvent.requiredSkills);
+			setUrgency(editingEvent.urgency);
+			setEventDate(editingEvent.eventDate);
+			setEventTime(editingEvent.eventTime);
+		} else {
+			setEventName("");
+			setDescription("");
+			setLocation("");
+			setRequiredSkills([]);
+			setUrgency("");
+			setEventDate("");
+			setEventTime("");
+		}
+		setErrors({});
+		setSaved(false);
+	}, [editingEvent]);
+
 	if (!open) return null;
 	return (
 	    <div aria-modal role="dialog" className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
@@ -71,14 +108,18 @@ export default function NewEventModal({ open, onClose }: NewEventModalProps) {
 				<div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
 					<div className="flex items-center gap-2">
 						<span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-900/40 text-cyan-300">🗓️</span>
-						<h2 className="text-lg font-semibold text-slate-100">Create a New Event</h2>
+						<h2 className="text-lg font-semibold text-slate-100">
+							{editingEvent ? "Edit Event" : "Create a New Event"}
+						</h2>
 					</div>
 					<button onClick={onClose} aria-label="Close" className="rounded-lg px-3 py-1 text-slate-300 hover:bg-slate-800/80 hover:text-white">✕</button>
 				</div>
 
 				<form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
 					{saved && (
-						<div className="rounded-lg border border-emerald-700 bg-emerald-900/30 px-3 py-2 text-emerald-300">Event saved (mock).</div>
+						<div className="rounded-lg border border-emerald-700 bg-emerald-900/30 px-3 py-2 text-emerald-300">
+							{editingEvent ? "Event updated (mock)." : "Event saved (mock)."}
+						</div>
 					)}
 
 
@@ -176,7 +217,9 @@ export default function NewEventModal({ open, onClose }: NewEventModalProps) {
 					</div>
 
 					<div className="pt-2 pb-6">
-						<button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-black font-medium">Create Event</button>
+						<button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-black font-medium">
+							{editingEvent ? "Update Event" : "Create Event"}
+						</button>
 					</div>
 				</form>
 			</div>

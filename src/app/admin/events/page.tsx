@@ -73,6 +73,7 @@ export default function AdminEvents() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
   // Simulate API call
   useEffect(() => {
@@ -150,8 +151,19 @@ export default function AdminEvents() {
                 <h3 className="text-lg font-semibold text-slate-100">{e.eventName}</h3>
                 <p className="text-sm text-slate-400">Hosted by {e.fullName}</p>
               </div>
-              <div className="text-sm text-slate-300">
-                {new Date(e.eventDate).toLocaleDateString()} at {new Date(`2000-01-01T${e.eventTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-slate-300">
+                  {new Date(e.eventDate).toLocaleDateString()} at {new Date(`2000-01-01T${e.eventTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingEvent(e);
+                    setOpen(true);
+                  }}
+                  className="rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white shadow transition-colors hover:bg-blue-700"
+                >
+                  Edit Event
+                </button>
               </div>
             </div>
             <p className="mt-3 text-slate-300">{e.description}</p>
@@ -196,7 +208,14 @@ export default function AdminEvents() {
           </div>
         ))}
       </div>
-      <NewEventModal open={open} onClose={() => setOpen(false)} />
+      <NewEventModal 
+        open={open} 
+        onClose={() => {
+          setOpen(false);
+          setEditingEvent(null);
+        }} 
+        editingEvent={editingEvent}
+      />
     </div>
   );
 }
