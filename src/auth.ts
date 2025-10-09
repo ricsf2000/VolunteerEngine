@@ -1,37 +1,17 @@
-// Certain code has been commented out, pending backend implementation
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { authConfig } from '@/auth.config';
 import { z } from 'zod';
-// import type { User } from '@/app/lib/definitions';
+import { getUserCredentialsByEmailAndRole } from '@/app/lib/dal/userCredentials';
 import bcrypt from 'bcrypt';
-// import postgres from 'postgres';
  
-// const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
-
-// Dummy users for development - remove when backend is implemented
-const dummyUsers = [
-  { id: '1', email: 'admin@test.com', name: 'Admin User', password: 'dummy-password', role: 'admin' },
-  { id: '2', email: 'volunteer@test.com', name: 'Volunteer User', password: 'dummy-password', role: 'volunteer' },
-];
- 
-async function getUser(email: string, expectedRole?: string): Promise<any | undefined> {
-  // try {
-  //   const user = await sql<User[]>`SELECT * FROM users WHERE email=${email} AND role=${expectedRole}`;
-  //   return user[0];
-  // } catch (error) {
-  //   console.error('Failed to fetch user:', error);
-  //   throw new Error('Failed to fetch user.');
-  // }
-  
-  // Dummy implementation - remove when backend is implemented
-  const user = dummyUsers.find(user => user.email === email);
-  
-  if (expectedRole && user && user.role !== expectedRole) {
-    return undefined;
+async function getUser(email: string, role: string) {
+  try {
+    return await getUserCredentialsByEmailAndRole(email, role);
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    throw new Error('Failed to fetch user.');
   }
-  
-  return user;
 }
  
 export const { auth, signIn, signOut } = NextAuth({
@@ -58,14 +38,19 @@ export const { auth, signIn, signOut } = NextAuth({
             }
           }
 
-          // Uncomment below when backend is implemented
-          // const user = await getUser(email, expectedRole);
-          // if (!user) return null;
-          // const passwordsMatch = await bcrypt.compare(password, user.password); 
-          const hard_coded_email = expectedRole === 'admin' ? 'admin@test.com' : 'volunteer@test.com';
-          const user = await getUser(hard_coded_email, expectedRole);
+          console.log('Auth debug - email:', email, 'expectedRole:', expectedRole);
           
-          const passwordsMatch = true; // Dummy - any password works for now
+          if (!expectedRole) {
+            console.log('No expected role found, auth failed');
+            return null;
+          }
+          
+          const user = await getUser(email, expectedRole);
+          console.log('Found user:', user ? 'YES' : 'NO');
+          if (!user) return null;
+          
+          const passwordsMatch = await bcrypt.compare(password, user.password);
+          console.log('Password match:', passwordsMatch);
           if (passwordsMatch) return user;
         }
  

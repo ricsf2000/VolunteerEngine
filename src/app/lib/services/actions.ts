@@ -2,6 +2,7 @@
  
 import { signIn, signOut } from '@/auth';
 import { AuthError } from 'next-auth';
+import { createUserCredentials } from '@/app/lib/dal/userCredentials';
 
 export async function authenticate(
   prevState: string | undefined,
@@ -49,14 +50,12 @@ export async function registerUser(
       return 'Password must be at least 6 characters.';
     }
 
-    // TODO: Check if user already exists
-    // TODO: Hash password with bcrypt
-    // TODO: Insert user into database
-    
-    // For now, just log the registration attempt
-    console.log('Registration attempt:', { email, role });
-    
-    // TODO: Actually create user in database here
+    // Create user in DAL
+    await createUserCredentials({
+      email,
+      password,
+      role: role as 'admin' | 'volunteer'
+    });
     
     // Auto-login the user after successful registration
     await signIn('credentials', {

@@ -2,7 +2,7 @@
  
 import { useActionState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { authenticate } from '@/app/lib/actions';
+import { authenticate } from '@/app/lib/services/actions';
  
 export default function LoginForm() {
   const pathname = usePathname();

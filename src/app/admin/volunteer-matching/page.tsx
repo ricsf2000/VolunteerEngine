@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
-import { volunteerMatchingApi } from '@/app/lib/volunteer-matching-api';
+import { volunteerMatchingApi } from '@/app/lib/services/volunteer-matching-api';
 
 export default function VolunteerMatchingPage() 
 {

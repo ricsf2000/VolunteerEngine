@@ -1,4 +1,4 @@
-import { handleSignOut } from '@/app/lib/actions';
+import { handleSignOut } from '@/app/lib/services/actions';
 
 export function SignOutButton() {
   return (

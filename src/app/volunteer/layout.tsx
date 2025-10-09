@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { SidebarLink } from "@/components/SidebarLink";
 import { SignOutButton } from "@/components/SignOutButton";
-import { getProfileStatus } from "@/app/lib/userActions";
 
 export default function VolunteerLayout({
   children,
@@ -19,8 +18,18 @@ export default function VolunteerLayout({
   // Check if profile is completed
   useEffect(() => {
     const checkProfile = async () => {
-      const status = await getProfileStatus();
-      setIsProfileComplete(status.isComplete);
+      try {
+        const response = await fetch('/api/profile?status=true');
+        if (response.ok) {
+          const data = await response.json();
+          setIsProfileComplete(data.isComplete);
+        } else {
+          setIsProfileComplete(false);
+        }
+      } catch (error) {
+        console.error('Error checking profile status:', error);
+        setIsProfileComplete(false);
+      }
     };
     checkProfile();
   }, [pathname]); // Re-check when pathname changes

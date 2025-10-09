@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { usePathname } from 'next/navigation';
-import { registerUser } from '@/app/lib/actions';
+import { registerUser } from '@/app/lib/services/actions';
 import Link from 'next/link';
 
 interface RegistrationFormProps {
