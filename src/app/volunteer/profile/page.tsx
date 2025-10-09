@@ -2,61 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, Calendar, X, Save } from 'lucide-react';
-import { getProfile, saveProfile } from '@/app/lib/userActions';
 import { Loading } from '@/components/Loading';
 
-const US_STATES = [
-  { code: 'AL', name: 'Alabama' },
-  { code: 'AK', name: 'Alaska' },
-  { code: 'AZ', name: 'Arizona' },
-  { code: 'AR', name: 'Arkansas' },
-  { code: 'CA', name: 'California' },
-  { code: 'CO', name: 'Colorado' },
-  { code: 'CT', name: 'Connecticut' },
-  { code: 'DE', name: 'Delaware' },
-  { code: 'FL', name: 'Florida' },
-  { code: 'GA', name: 'Georgia' },
-  { code: 'HI', name: 'Hawaii' },
-  { code: 'ID', name: 'Idaho' },
-  { code: 'IL', name: 'Illinois' },
-  { code: 'IN', name: 'Indiana' },
-  { code: 'IA', name: 'Iowa' },
-  { code: 'KS', name: 'Kansas' },
-  { code: 'KY', name: 'Kentucky' },
-  { code: 'LA', name: 'Louisiana' },
-  { code: 'ME', name: 'Maine' },
-  { code: 'MD', name: 'Maryland' },
-  { code: 'MA', name: 'Massachusetts' },
-  { code: 'MI', name: 'Michigan' },
-  { code: 'MN', name: 'Minnesota' },
-  { code: 'MS', name: 'Mississippi' },
-  { code: 'MO', name: 'Missouri' },
-  { code: 'MT', name: 'Montana' },
-  { code: 'NE', name: 'Nebraska' },
-  { code: 'NV', name: 'Nevada' },
-  { code: 'NH', name: 'New Hampshire' },
-  { code: 'NJ', name: 'New Jersey' },
-  { code: 'NM', name: 'New Mexico' },
-  { code: 'NY', name: 'New York' },
-  { code: 'NC', name: 'North Carolina' },
-  { code: 'ND', name: 'North Dakota' },
-  { code: 'OH', name: 'Ohio' },
-  { code: 'OK', name: 'Oklahoma' },
-  { code: 'OR', name: 'Oregon' },
-  { code: 'PA', name: 'Pennsylvania' },
-  { code: 'RI', name: 'Rhode Island' },
-  { code: 'SC', name: 'South Carolina' },
-  { code: 'SD', name: 'South Dakota' },
-  { code: 'TN', name: 'Tennessee' },
-  { code: 'TX', name: 'Texas' },
-  { code: 'UT', name: 'Utah' },
-  { code: 'VT', name: 'Vermont' },
-  { code: 'VA', name: 'Virginia' },
-  { code: 'WA', name: 'Washington' },
-  { code: 'WV', name: 'West Virginia' },
-  { code: 'WI', name: 'Wisconsin' },
-  { code: 'WY', name: 'Wyoming' }
-];
 
 const SKILLS_OPTIONS = [
   'Event Planning',
@@ -99,17 +46,34 @@ export default function VolunteerProfile() {
   const [newAvailabilityDate, setNewAvailabilityDate] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [states, setStates] = useState<{code: string, name: string}[]>([]);
 
-  // Load existing profile data
+  // Load existing profile data and states
   useEffect(() => {
-    const loadProfile = async () => {
-      const profileData = await getProfile();
-      if (profileData) {
-        setFormData(profileData);
+    const loadData = async () => {
+      try {
+        // Load profile data
+        const profileResponse = await fetch('/api/profile');
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          if (profileData) {
+            setFormData(profileData);
+          }
+        }
+
+        // Load states
+        const statesResponse = await fetch('/api/states');
+        if (statesResponse.ok) {
+          const statesData = await statesResponse.json();
+          setStates(statesData);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
-    loadProfile();
+    loadData();
   }, []);
 
   const handleInputChange = (card: string, value: string) => {
@@ -150,14 +114,27 @@ export default function VolunteerProfile() {
   const handleSave = async () => {
     setIsSaving(true);
     
-    const result = await saveProfile(formData);
-    
-    if (result.success) {
-      console.log('Profile saved successfully');
-      // Reload page to update sidebar state
-      window.location.reload();
-    } else {
-      console.error('Failed to save profile:', (result as any).error);
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        console.log('Profile saved successfully');
+        // Reload page to update sidebar state
+        window.location.reload();
+      } else {
+        console.error('Failed to save profile:', result.error);
+        setIsSaving(false);
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
       setIsSaving(false);
     }
   };
@@ -276,12 +253,12 @@ export default function VolunteerProfile() {
                     onClick={() => setIsStateDropdownOpen(!isStateDropdownOpen)}
                     className={`card w-full px-3 py-2   rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500  text-left flex items-center justify-between ${formData.state ? 'text-white' : 'text-gray-400'}`}
                   >
-                    <span>{formData.state ? US_STATES.find(s => s.code === formData.state)?.name : 'Select a state'}</span>
+                    <span>{formData.state ? states.find(s => s.code === formData.state)?.name : 'Select a state'}</span>
                     <ChevronDown className="w-4 h-4" />
                   </button>
                   {isStateDropdownOpen && (
                     <div className="absolute z-10 w-full mt-1 bg-black   rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {US_STATES.map((state) => (
+                      {states.map((state) => (
                         <button
                           key={state.code}
                           type="button"
