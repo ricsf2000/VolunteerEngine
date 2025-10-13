@@ -37,15 +37,11 @@ const userCredentials: UserCredentials[] = [
 ];
 
 export async function getUserCredentialsByEmailAndRole(email: string, role: string): Promise<UserCredentials | null> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
   const credentials = userCredentials.find(c => c.email === email && c.role === role);
   return credentials || null;
 }
 
 export async function createUserCredentials(input: CreateUserCredentialsInput): Promise<UserCredentials> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
   // Check if user already exists  
   const existingCredentials = await getUserCredentialsByEmailAndRole(input.email, input.role);
   if (existingCredentials) {
@@ -72,8 +68,6 @@ export async function createUserCredentials(input: CreateUserCredentialsInput): 
 
 
 export async function updateUserPassword(userId: string, newPassword: string): Promise<UserCredentials | null> {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  
   const credentialsIndex = userCredentials.findIndex(c => c.id === userId);
   if (credentialsIndex === -1) return null;
   

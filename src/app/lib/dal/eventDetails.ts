@@ -40,20 +40,15 @@ const eventDetails: EventDetails[] = [
 ];
 
 export async function getEventById(id: string): Promise<EventDetails | null> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
   const event = eventDetails.find(e => e.id === id);
   return event || null;
 }
 
 export async function getAllEvents(): Promise<EventDetails[]> {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  
   return [...eventDetails];
 }
 
 export async function createEvent(input: CreateEventDetailsInput): Promise<EventDetails> {
-  await new Promise(resolve => setTimeout(resolve, 200));
   
   const newEvent: EventDetails = {
     id: (eventDetails.length + 1).toString(),
@@ -68,7 +63,6 @@ export async function createEvent(input: CreateEventDetailsInput): Promise<Event
 }
 
 export async function updateEvent(id: string, input: UpdateEventDetailsInput): Promise<EventDetails | null> {
-  await new Promise(resolve => setTimeout(resolve, 150));
   
   const eventIndex = eventDetails.findIndex(e => e.id === id);
   if (eventIndex === -1) return null;
