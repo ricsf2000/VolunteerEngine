@@ -58,14 +58,10 @@ const states: State[] = [
 ];
 
 export async function getAllStates(): Promise<State[]> {
-  await new Promise(resolve => setTimeout(resolve, 50));
-  
   return [...states];
 }
 
 export async function getStateByCode(code: string): Promise<State | null> {
-  await new Promise(resolve => setTimeout(resolve, 50));
-  
   const state = states.find(s => s.code === code);
   return state || null;
 }

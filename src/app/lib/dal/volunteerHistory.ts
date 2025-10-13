@@ -25,13 +25,10 @@ const volunteerHistory: VolunteerHistory[] = [
 ];
 
 export async function getHistoryByUserId(userId: string): Promise<VolunteerHistory[]> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
   return volunteerHistory.filter(h => h.userId === userId);
 }
 
 export async function createVolunteerHistory(input: CreateVolunteerHistoryInput): Promise<VolunteerHistory> {
-  await new Promise(resolve => setTimeout(resolve, 200));
   
   const newHistory: VolunteerHistory = {
     id: (volunteerHistory.length + 1).toString(),
@@ -46,7 +43,6 @@ export async function createVolunteerHistory(input: CreateVolunteerHistoryInput)
 }
 
 export async function updateVolunteerHistory(id: string, input: UpdateVolunteerHistoryInput): Promise<VolunteerHistory | null> {
-  await new Promise(resolve => setTimeout(resolve, 150));
   
   const historyIndex = volunteerHistory.findIndex(h => h.id === id);
   if (historyIndex === -1) return null;

@@ -40,15 +40,11 @@ const userProfiles: UserProfile[] = [
 ];
 
 export async function getUserProfileByUserId(userId: string): Promise<UserProfile | null> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
   const profile = userProfiles.find(p => p.userId === userId);
   return profile || null;
 }
 
 export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfile> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
   // Check if profile already exists
   const existingProfile = await getUserProfileByUserId(input.userId);
   if (existingProfile) {
@@ -77,8 +73,6 @@ export async function createUserProfile(input: CreateUserProfileInput): Promise<
 }
 
 export async function updateUserProfile(userId: string, input: UpdateUserProfileInput): Promise<UserProfile | null> {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  
   const profileIndex = userProfiles.findIndex(p => p.userId === userId);
   if (profileIndex === -1) return null;
   
