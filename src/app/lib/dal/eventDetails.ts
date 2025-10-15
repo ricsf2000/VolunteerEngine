@@ -63,17 +63,25 @@ export async function createEvent(input: CreateEventDetailsInput): Promise<Event
 }
 
 export async function updateEvent(id: string, input: UpdateEventDetailsInput): Promise<EventDetails | null> {
-  
+
   const eventIndex = eventDetails.findIndex(e => e.id === id);
   if (eventIndex === -1) return null;
-  
+
   const event = eventDetails[eventIndex];
-  
+
   eventDetails[eventIndex] = {
     ...event,
     ...input,
     updatedAt: new Date(),
   };
-  
+
   return eventDetails[eventIndex];
+}
+
+export async function deleteEvent(id: string): Promise<boolean> {
+  const eventIndex = eventDetails.findIndex(e => e.id === id);
+  if (eventIndex === -1) return false;
+
+  eventDetails.splice(eventIndex, 1);
+  return true;
 }

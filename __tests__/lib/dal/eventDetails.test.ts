@@ -3,6 +3,7 @@ import {
   getAllEvents,
   createEvent,
   updateEvent,
+  deleteEvent,
   EventDetails,
   CreateEventDetailsInput,
   UpdateEventDetailsInput
@@ -116,11 +117,39 @@ describe('eventDetails DAL', () => {
 
     it('should handle partial updates', async () => {
       const partialUpdate = { eventName: 'Partially Updated Event' };
-      
+
       const updatedEvent = await updateEvent('1', partialUpdate);
 
       expect(updatedEvent?.eventName).toBe('Partially Updated Event');
       expect(updatedEvent?.id).toBe('1');
+    });
+  });
+
+  describe('deleteEvent', () => {
+    it('should delete existing event successfully', async () => {
+      // First verify the event exists
+      const eventBefore = await getEventById('1');
+      expect(eventBefore).toBeTruthy();
+
+      // Delete the event
+      const result = await deleteEvent('1');
+      expect(result).toBe(true);
+
+      // Verify it's deleted
+      const eventAfter = await getEventById('1');
+      expect(eventAfter).toBeNull();
+    });
+
+    it('should return false for non-existent event', async () => {
+      const result = await deleteEvent('999');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false for empty ID', async () => {
+      const result = await deleteEvent('');
+
+      expect(result).toBe(false);
     });
   });
 });

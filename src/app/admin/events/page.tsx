@@ -25,47 +25,34 @@ type EventItem = {
 };
 
 
-// Dummy API call function
+// API call function to fetch events from backend
 const getEvents = async (): Promise<EventItem[]> => {
-  // Return mock data
-  return [
-    {
-      id: 1,
-      fullName: "Alex Johnson",
-      eventName: "Community Food Drive",
-      description: "Help organize and distribute food items to local families in need.",
-      location: "Central Park",
-      requiredSkills: ["Logistics", "Communication"],
-      urgency: "Medium",
-      eventDate: "2025-03-25",
-      eventTime: "09:00",
-      maxVolunteers: 15,
-      volunteers: [
-        { id: 1, name: "Sarah Wilson", status: "confirmed" },
-        { id: 2, name: "Mike Chen", status: "confirmed" },
-        { id: 3, name: "Emily Davis", status: "pending" },
-        { id: 4, name: "James Rodriguez", status: "confirmed" },
-        { id: 5, name: "Lisa Thompson", status: "pending" }
-      ]
-    },
-    {
-      id: 2,
-      fullName: "Samira Khan",
-      eventName: "Beach Cleanup",
-      description: "Join us for a beach cleanup to preserve our coastline.",
-      location: "Santa Monica Beach",
-      requiredSkills: ["Crowd Control", "Physical Labor"],
-      urgency: "Low",
-      eventDate: "2025-03-28",
-      eventTime: "08:00",
-      maxVolunteers: 20,
-      volunteers: [
-        { id: 6, name: "David Park", status: "confirmed" },
-        { id: 7, name: "Anna Martinez", status: "confirmed" },
-        { id: 8, name: "Tom Anderson", status: "confirmed" }
-      ]
-    }
-  ];
+  const response = await fetch('/api/events', {
+    cache: 'no-store', // Always fetch fresh data
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch events from API');
+  }
+
+  const data = await response.json();
+
+  // Transform backend data to match frontend format
+  // Note: Backend may not have all fields (volunteers, fullName, eventTime)
+  // You'll need to adjust this mapping based on your actual backend structure
+  return data.map((event: any) => ({
+    id: parseInt(event.id) || 0,
+    fullName: event.createdBy || "Unknown",
+    eventName: event.eventName,
+    description: event.description,
+    location: event.location,
+    requiredSkills: event.requiredSkills || [],
+    urgency: event.urgency || "medium",
+    eventDate: event.eventDate ? new Date(event.eventDate).toISOString().split('T')[0] : "",
+    eventTime: event.eventDate ? new Date(event.eventDate).toISOString().split('T')[1].slice(0, 5) : "00:00",
+    maxVolunteers: event.maxVolunteers || 10,
+    volunteers: event.volunteers || [] // This will come from volunteer history later
+  }));
 };
 
 export default function AdminEvents() {
@@ -75,22 +62,23 @@ export default function AdminEvents() {
   const [error, setError] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
-  // Simulate API call
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getEvents();
-        setEvents(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-        console.error("API call failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch events from backend API
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getEvents();
+      setEvents(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      console.error("API call failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Load events on component mount
+  useEffect(() => {
     fetchEvents();
   }, []);
 
@@ -208,12 +196,14 @@ export default function AdminEvents() {
           </div>
         ))}
       </div>
-      <NewEventModal 
-        open={open} 
+      <NewEventModal
+        open={open}
         onClose={() => {
           setOpen(false);
           setEditingEvent(null);
-        }} 
+          // Refresh the event list to show newly created/edited event
+          fetchEvents();
+        }}
         editingEvent={editingEvent}
       />
     </div>
