@@ -1,4 +1,3 @@
-// src/app/lib/services/notificationActions.ts
 'use server';
 
 import { 
@@ -12,7 +11,7 @@ import {
 } from '../dal/notifications';
 
 async function getCurrentUserId(): Promise<number> {
-  // TODO: Get from session/auth
+  // todo: get from session/auth
   return 1;
 }
 
@@ -78,7 +77,7 @@ export async function sendVolunteerNotification(
   message: string,
   eventInfo?: NotificationData['eventInfo']
 ): Promise<NotificationData> {
-  // ✅ Validation OUTSIDE try-catch - let these errors propagate as-is
+  // validation outside try-catch - let these errors propagate as-is
   if (!title || title.trim().length === 0) {
     throw new Error('Title is required');
   }
@@ -86,7 +85,7 @@ export async function sendVolunteerNotification(
     throw new Error('Message is required');
   }
   
-  // ✅ Only catch DAL/database errors
+  // only catch dal/database errors
   try {
     const notification = await createNotification({
       userId: volunteerId,

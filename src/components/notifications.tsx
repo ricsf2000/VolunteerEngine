@@ -4,13 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Clock, MapPin, Users, Calendar, CheckCircle, AlertCircle, Info, X, Loader2 } from 'lucide-react';
 import { Loading } from './Loading';
 
-// Import types from DAL
+// import types from dal
 import type { NotificationData } from '@/app/lib/dal/notifications';
 
 type UserRole = 'volunteer' | 'admin';
 
 // helper func to get the right icon for notif type
-const getIcon = (type: string) => {
+const getIcon = (type: string) => 
+{
   switch (type) {
     case 'assignment':
     case 'volunteer_application':
@@ -32,8 +33,10 @@ const getIcon = (type: string) => {
 };
 
 // helper func for notif card colors
-const getCardColors = (isRead: boolean, userRole: UserRole) => {
-  if (isRead) {
+const getCardColors = (isRead: boolean, userRole: UserRole) => 
+{
+  if (isRead) 
+  {
     return 'border-l-gray-600 card';
   }
   return userRole === 'volunteer' 
@@ -42,18 +45,22 @@ const getCardColors = (isRead: boolean, userRole: UserRole) => {
 };
 
 // helper func for icon colors
-const getIconColors = (isRead: boolean, userRole: UserRole) => {
-  if (isRead) {
+const getIconColors = (isRead: boolean, userRole: UserRole) => 
+{
+  if (isRead) 
+  {
     return 'text-gray-500';
   }
   return userRole === 'volunteer' ? 'text-blue-400' : 'text-green-400';
 };
 
-interface NotificationsProps {
+interface NotificationsProps 
+{
   userRole: UserRole;
 }
 
-export default function Notifications({ userRole }: NotificationsProps) {
+export default function Notifications({ userRole }: NotificationsProps) 
+{
   // state vars
   const [notificationsList, setNotificationsList] = useState<NotificationData[]>([]);
   const [currentFilter, setCurrentFilter] = useState<'all' | 'unread'>('all');
@@ -61,17 +68,20 @@ export default function Notifications({ userRole }: NotificationsProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   // load notifs when component mounts or user role changes
-  useEffect(() => {
+  useEffect(() => 
+  {
     loadNotifications();
   }, [userRole]);
 
   // func to load all notifs from API
-  const loadNotifications = async () => {
+  const loadNotifications = async () => 
+  {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/notifications?role=${userRole}`);
       
-      if (!response.ok) {
+      if (!response.ok) 
+      {
         throw new Error('Failed to fetch notifications');
       }
       
@@ -98,13 +108,14 @@ export default function Notifications({ userRole }: NotificationsProps) {
         })
       });
       
-      if (!response.ok) {
+      if (!response.ok) 
+      {
         throw new Error('Failed to toggle read status');
       }
       
       const data = await response.json();
       
-      // Update local state
+      // update local state
       setNotificationsList(prev =>
         prev.map(notif => notif.id === id ? data.notification : notif)
       );
@@ -116,7 +127,8 @@ export default function Notifications({ userRole }: NotificationsProps) {
   };
 
   // mark all notifs as read via API
-  const markAllAsRead = async () => {
+  const markAllAsRead = async () => 
+  {
     setLoadingAction('mark-all');
     try {
       const response = await fetch('/api/notifications', {
@@ -125,11 +137,12 @@ export default function Notifications({ userRole }: NotificationsProps) {
         body: JSON.stringify({ action: 'mark-all-read' })
       });
       
-      if (!response.ok) {
+      if (!response.ok) 
+      {
         throw new Error('Failed to mark all as read');
       }
       
-      // Update local state
+      // update local state
       setNotificationsList(prev => prev.map(notif => ({ ...notif, isRead: true })));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
@@ -139,7 +152,8 @@ export default function Notifications({ userRole }: NotificationsProps) {
   };
 
   // delete a notif via API
-  const deleteNotification = async (id: number) => {
+  const deleteNotification = async (id: number) => 
+  {
     setLoadingAction(`delete-${id}`);
     try {
       const response = await fetch('/api/notifications', {
@@ -148,11 +162,12 @@ export default function Notifications({ userRole }: NotificationsProps) {
         body: JSON.stringify({ notificationId: id })
       });
       
-      if (!response.ok) {
+      if (!response.ok) 
+      {
         throw new Error('Failed to delete notification');
       }
       
-      // Update local state
+      // update local state
       setNotificationsList(prev => prev.filter(notif => notif.id !== id));
     } catch (error) {
       console.error('Failed to delete notification:', error);
@@ -162,8 +177,10 @@ export default function Notifications({ userRole }: NotificationsProps) {
   };
 
   // filter notifs based on current filter
-  const filteredNotifications = notificationsList.filter(notif => {
+  const filteredNotifications = notificationsList.filter(notif => 
+  {
     if (currentFilter === 'unread') return !notif.isRead;
+    
     return true;
   });
 
@@ -173,7 +190,8 @@ export default function Notifications({ userRole }: NotificationsProps) {
   const primaryColor = userRole === 'volunteer' ? 'blue' : 'green';
 
   // loading screen
-  if (isLoading) {
+  if (isLoading) 
+  {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <Loading message="Loading notifications" className="py-12" />

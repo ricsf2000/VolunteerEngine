@@ -6,7 +6,7 @@ import {
   sendVolunteerNotification,
 } from '@/app/lib/services/notificationActions';
 
-// Mock the DAL layer
+// mock the dal layer
 jest.mock('@/app/lib/dal/notifications', () => ({
   getNotificationsByUserRole: jest.fn(),
   updateNotificationReadStatus: jest.fn(),
@@ -20,7 +20,7 @@ import * as notificationDAL from '@/app/lib/dal/notifications';
 describe('Notification Actions (Service Layer)', () => {
   
   beforeEach(() => {
-    // Clear all mocks before each test
+    // clear all mocks before each test
     jest.clearAllMocks();
   });
 

@@ -1,6 +1,4 @@
-// src/app/lib/dal/notifications.ts
-
-// Type definitions (moved from component)
+// type definitions (moved from component)
 export interface EventInfo {
   name: string;
   date: string;
@@ -30,16 +28,16 @@ export interface NotificationData {
   message: string;
   timestamp: string;
   isRead: boolean;
-  userId: number; // Add this - which user owns this notification
+  userId: number; // add this - which user owns this notification
   userRole: 'volunteer' | 'admin';
   eventInfo?: EventInfo;
   volunteerInfo?: VolunteerInfo;
   matchStats?: MatchStats;
 }
 
-// Hardcoded data (simulating database)
+// hardcoded data (simulating database)
 const NOTIFICATIONS_DB: NotificationData[] = [
-  // VOLUNTEER NOTIFICATIONS
+  // volunteer notifs
   {
     id: 1,
     userId: 1,
@@ -99,7 +97,7 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     isRead: true
   },
   
-  // ADMIN NOTIFICATIONS
+  // admin notifs
   {
     id: 5,
     userId: 2,
@@ -163,20 +161,20 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   }
 ];
 
-// DAL Functions - Pure database operations (no business logic!)
+// dal functions - pure database operations (no business logic!)
 
 export async function getNotificationsByUserId(userId: number): Promise<NotificationData[]> {
-  // Simulate database query delay
+  // simulate database query delay
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  // In real implementation: SELECT * FROM notifications WHERE user_id = $1
+  // in real implementation: select * from notifications where user_id = $1
   return NOTIFICATIONS_DB.filter(notif => notif.userId === userId);
 }
 
 export async function getNotificationsByUserRole(userRole: 'volunteer' | 'admin'): Promise<NotificationData[]> {
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  // In real implementation: SELECT * FROM notifications WHERE user_role = $1
+  // in real implementation: select * from notifications where user_role = $1
   return NOTIFICATIONS_DB.filter(notif => notif.userRole === userRole);
 }
 
@@ -186,7 +184,7 @@ export async function updateNotificationReadStatus(
 ): Promise<NotificationData | null> {
   await new Promise(resolve => setTimeout(resolve, 200));
   
-  // In real implementation: UPDATE notifications SET is_read = $1 WHERE id = $2
+  // in real implementation: update notifications set is_read = $1 where id = $2
   const notification = NOTIFICATIONS_DB.find(n => n.id === notificationId);
   if (notification) {
     notification.isRead = isRead;
@@ -198,7 +196,7 @@ export async function updateNotificationReadStatus(
 export async function markAllNotificationsAsRead(userId: number): Promise<number> {
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  // In real implementation: UPDATE notifications SET is_read = true WHERE user_id = $1
+  // in real implementation: update notifications set is_read = true where user_id = $1
   const userNotifications = NOTIFICATIONS_DB.filter(n => n.userId === userId);
   userNotifications.forEach(n => n.isRead = true);
   return userNotifications.length;
@@ -207,7 +205,7 @@ export async function markAllNotificationsAsRead(userId: number): Promise<number
 export async function deleteNotification(notificationId: number): Promise<boolean> {
   await new Promise(resolve => setTimeout(resolve, 200));
   
-  // In real implementation: DELETE FROM notifications WHERE id = $1
+  // in real implementation: delete from notifications where id = $1
   const index = NOTIFICATIONS_DB.findIndex(n => n.id === notificationId);
   if (index !== -1) {
     NOTIFICATIONS_DB.splice(index, 1);
@@ -219,7 +217,7 @@ export async function deleteNotification(notificationId: number): Promise<boolea
 export async function createNotification(data: Omit<NotificationData, 'id'>): Promise<NotificationData> {
   await new Promise(resolve => setTimeout(resolve, 200));
   
-  // In real implementation: INSERT INTO notifications (...) VALUES (...)
+  // in real implementation: insert into notifications (...) VALUES (...)
   const newNotification: NotificationData = {
     ...data,
     id: Math.max(...NOTIFICATIONS_DB.map(n => n.id), 0) + 1

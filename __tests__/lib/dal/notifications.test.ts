@@ -26,7 +26,7 @@ describe('Notifications DAL', () => {
     });
 
     it('should return empty array if no notifications match the role', async () => {
-      // This assumes you might have edge cases
+      // maked edge case assumption
       const result = await getNotificationsByUserRole('admin');
       expect(Array.isArray(result)).toBe(true);
     });
@@ -90,8 +90,8 @@ describe('Notifications DAL', () => {
 
   describe('deleteNotification', () => {
     it('should delete an existing notification', async () => {
-      // Note: This will actually delete from the in-memory array
-      // You might want to test with a fresh notification or reset data between tests
+      // note: this will actually delete from the in-memory array
+      // you might want to test with a fresh notification or reset data between tests
       const notificationId = 1;
       const result = await deleteNotification(notificationId);
       
