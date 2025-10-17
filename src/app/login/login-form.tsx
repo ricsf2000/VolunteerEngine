@@ -4,7 +4,11 @@ import { useActionState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { authenticate } from '@/app/lib/services/actions';
  
-export default function LoginForm() {
+export default function LoginForm({
+  expectedRole,
+}: {
+  expectedRole?: 'admin' | 'volunteer';
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [errorMessage, formAction, isPending] = useActionState(
@@ -14,6 +18,10 @@ export default function LoginForm() {
 
   const callbackUrl = searchParams.get('callbackUrl') || '/';
  
+  const buttonColorClasses = expectedRole === 'admin'
+    ? 'bg-green-600 hover:bg-green-700'
+    : 'bg-blue-600 hover:bg-blue-700';
+
   return (
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="currentPath" value={pathname} />
@@ -59,7 +67,7 @@ export default function LoginForm() {
         </div>
         <button 
           type="submit"
-          className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+          className={`mt-6 w-full ${buttonColorClasses} text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50`}
           disabled={isPending}
         >
           {isPending ? 'Signing in...' : 'Log in'}
