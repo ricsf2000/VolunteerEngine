@@ -71,8 +71,8 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should create history with different statuses', async () => {
-      const completedInput = { ...validInput, participantStatus: 'confirmed' };
-      const cancelledInput = { ...validInput, participantStatus: 'cancelled', userId: 'user-cancelled' };
+      const completedInput = { ...validInput, participantStatus: 'confirmed' as const };
+      const cancelledInput = { ...validInput, participantStatus: 'cancelled' as const, userId: 'user-cancelled' };
 
       const completedHistory = await createVolunteerHistory(completedInput);
       const cancelledHistory = await createVolunteerHistory(cancelledInput);
@@ -103,7 +103,7 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should handle partial updates', async () => {
-      const partialUpdate = { participantStatus: 'pending' };
+      const partialUpdate = { participantStatus: 'pending' as const };
       
       const updatedHistory = await updateVolunteerHistory('1', partialUpdate);
 
@@ -112,7 +112,7 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should preserve unchanged fields', async () => {
-      const partialUpdate = { participantStatus: 'cancelled' };
+      const partialUpdate = { participantStatus: 'cancelled' as const };
       
       const updatedHistory = await updateVolunteerHistory('1', partialUpdate);
 

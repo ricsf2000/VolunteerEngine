@@ -1,4 +1,3 @@
-import { AuthError } from 'next-auth';
 import * as authModule from '@/auth';
 import * as userCredentialsDAL from '@/app/lib/dal/userCredentials';
 import { authenticate, handleSignOut, registerUser } from '@/app/lib/services/actions';
@@ -13,6 +12,21 @@ jest.mock('@/auth', () => ({
 jest.mock('@/app/lib/dal/userCredentials', () => ({
   createUserCredentials: jest.fn()
 }));
+
+// Mock NextAuth AuthError
+jest.mock('next-auth', () => ({
+  AuthError: class MockAuthError extends Error {
+    type: string;
+    constructor(type: string) {
+      super(`AuthError: ${type}`);
+      this.type = type;
+      this.name = 'AuthError';
+    }
+  }
+}));
+
+// Import AuthError after mocking
+import { AuthError } from 'next-auth';
 
 const mockSignIn = authModule.signIn as jest.MockedFunction<any>;
 const mockSignOut = authModule.signOut as jest.MockedFunction<any>;

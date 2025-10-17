@@ -14,7 +14,19 @@ const mockBcryptHash = bcrypt.hash as jest.MockedFunction<any>;
 describe('userCredentials DAL', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockBcryptHash.mockImplementation(async (password: string) => `hashed_${password}`);
+    // Mock with actual bcrypt hashes for consistent testing
+    const hashMap: Record<string, string> = {
+      'secure-password-123': '$2b$10$bfpANFCYrBK2TAXY6VeKXeKxkpIdYk02358SyAbs0SWLMAsQE9uyu',
+      'new-secure-password': '$2b$10$UJbHI9JKRgR1X5er.pbSvebgyLjsluaD1Bc66Fd6QkJm3S6EMjm8O',
+      'new-password': '$2b$10$LpuO8qdtd0vqhTPPIzQZV.062/Aahqw9Ec1F1rcOOEQf362CEaA9W',
+      '': '$2b$10$emptyPasswordHashMockForTestingPurposes12345',
+      'P@ssw0rd!#$%^&*()': '$2b$10$specialCharsHashMockForTestingPurposes123456',
+      'pässwörd123': '$2b$10$mKV6bU6d48F8cEODoU0L8eNIa0KcdxilhVbHQoCiIllu/dTcEJ.6m'
+    };
+    
+    mockBcryptHash.mockImplementation(async (password: string) => {
+      return hashMap[password] || `$2b$10$genericMock${password.slice(0, 30).padEnd(30, '0')}`;
+    });
   });
 
   describe('getUserCredentialsByEmailAndRole', () => {
@@ -86,7 +98,7 @@ describe('userCredentials DAL', () => {
       expect(newCredentials).toBeTruthy();
       expect(newCredentials.email).toBe(validInput.email);
       expect(newCredentials.role).toBe(validInput.role);
-      expect(newCredentials.password).toBe('hashed_secure-password-123');
+      expect(newCredentials.password).toBe('$2b$10$bfpANFCYrBK2TAXY6VeKXeKxkpIdYk02358SyAbs0SWLMAsQE9uyu');
       expect(newCredentials.id).toBeTruthy();
       expect(newCredentials.createdAt).toBeInstanceOf(Date);
       expect(newCredentials.updatedAt).toBeInstanceOf(Date);
@@ -183,7 +195,7 @@ describe('userCredentials DAL', () => {
       const updatedCredentials = await updateUserPassword('1', newPassword);
 
       expect(updatedCredentials).toBeTruthy();
-      expect(updatedCredentials?.password).toBe('hashed_new-secure-password');
+      expect(updatedCredentials?.password).toBe('$2b$10$UJbHI9JKRgR1X5er.pbSvebgyLjsluaD1Bc66Fd6QkJm3S6EMjm8O');
       expect(updatedCredentials?.id).toBe('1');
       expect(updatedCredentials?.updatedAt).toBeInstanceOf(Date);
       expect(mockBcryptHash).toHaveBeenCalledWith(newPassword, 10);
@@ -207,6 +219,7 @@ describe('userCredentials DAL', () => {
 
     it('should preserve other user fields', async () => {
       const originalCredentials = await getUserCredentialsByEmailAndRole('volunteer@test.com', 'volunteer');
+      const originalPassword = originalCredentials?.password; // Capture original password value
       const updatedCredentials = await updateUserPassword('2', 'new-password');
 
       expect(updatedCredentials?.id).toBe(originalCredentials?.id);
@@ -214,7 +227,7 @@ describe('userCredentials DAL', () => {
       expect(updatedCredentials?.role).toBe(originalCredentials?.role);
       expect(updatedCredentials?.createdAt).toEqual(originalCredentials?.createdAt);
       // Only password and updatedAt should change
-      expect(updatedCredentials?.password).not.toBe(originalCredentials?.password);
+      expect(updatedCredentials?.password).not.toBe(originalPassword);
     });
 
     it('should handle bcrypt errors during password update', async () => {
@@ -227,7 +240,7 @@ describe('userCredentials DAL', () => {
     it('should handle empty password', async () => {
       const updatedCredentials = await updateUserPassword('1', '');
 
-      expect(updatedCredentials?.password).toBe('hashed_');
+      expect(updatedCredentials?.password).toBe('$2b$10$emptyPasswordHashMockForTestingPurposes12345');
       expect(mockBcryptHash).toHaveBeenCalledWith('', 10);
     });
 
@@ -235,7 +248,7 @@ describe('userCredentials DAL', () => {
       const specialPassword = 'P@ssw0rd!#$%^&*()';
       const updatedCredentials = await updateUserPassword('1', specialPassword);
 
-      expect(updatedCredentials?.password).toBe(`hashed_${specialPassword}`);
+      expect(updatedCredentials?.password).toBe('$2b$10$specialCharsHashMockForTestingPurposes123456');
       expect(mockBcryptHash).toHaveBeenCalledWith(specialPassword, 10);
     });
   });
@@ -274,7 +287,7 @@ describe('userCredentials DAL', () => {
 
       const credentials = await createUserCredentials(input);
 
-      expect(credentials.password).toBe(`hashed_${longPassword}`);
+      expect(credentials.password).toMatch(/^\$2b\$10\$genericMock/); // Long password uses generic mock
       expect(mockBcryptHash).toHaveBeenCalledWith(longPassword, 10);
     });
 
@@ -288,7 +301,7 @@ describe('userCredentials DAL', () => {
       const credentials = await createUserCredentials(unicodeInput);
 
       expect(credentials.email).toBe('user@tëst.com');
-      expect(credentials.password).toBe('hashed_pässwörd123');
+      expect(credentials.password).toBe('$2b$10$mKV6bU6d48F8cEODoU0L8eNIa0KcdxilhVbHQoCiIllu/dTcEJ.6m');
     });
   });
 });
