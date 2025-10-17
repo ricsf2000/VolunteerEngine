@@ -34,15 +34,15 @@ describe('Notifications DAL', () => {
 
   describe('getNotificationsByUserId', () => {
     it('should return notifications for a specific user', async () => {
-      const userId = 1;
+      const userId = '2';
       const result = await getNotificationsByUserId(userId);
-      
+
       expect(result.every(n => n.userId === userId)).toBe(true);
     });
 
     it('should return empty array for user with no notifications', async () => {
-      const result = await getNotificationsByUserId(999);
-      
+      const result = await getNotificationsByUserId('999');
+
       expect(result).toEqual([]);
     });
   });
@@ -74,16 +74,16 @@ describe('Notifications DAL', () => {
 
   describe('markAllNotificationsAsRead', () => {
     it('should mark all notifications as read for a user', async () => {
-      const userId = 1;
+      const userId = '2';
       const count = await markAllNotificationsAsRead(userId);
-      
+
       expect(count).toBeGreaterThanOrEqual(0);
       expect(typeof count).toBe('number');
     });
 
     it('should return 0 for user with no notifications', async () => {
-      const count = await markAllNotificationsAsRead(999);
-      
+      const count = await markAllNotificationsAsRead('999');
+
       expect(count).toBe(0);
     });
   });
@@ -108,7 +108,7 @@ describe('Notifications DAL', () => {
   describe('createNotification', () => {
     it('should create a new notification with generated ID', async () => {
       const newNotification: Omit<NotificationData, 'id'> = {
-        userId: 1,
+        userId: '2',
         userRole: 'volunteer',
         type: 'reminder',
         title: 'Test Notification',
@@ -118,16 +118,16 @@ describe('Notifications DAL', () => {
       };
 
       const result = await createNotification(newNotification);
-      
+
       expect(result).toHaveProperty('id');
       expect(result.title).toBe('Test Notification');
       expect(result.message).toBe('This is a test');
-      expect(result.userId).toBe(1);
+      expect(result.userId).toBe('2');
     });
 
     it('should create notification with event info', async () => {
       const newNotification: Omit<NotificationData, 'id'> = {
-        userId: 1,
+        userId: '2',
         userRole: 'volunteer',
         type: 'assignment',
         title: 'Event Assignment',
@@ -142,7 +142,7 @@ describe('Notifications DAL', () => {
       };
 
       const result = await createNotification(newNotification);
-      
+
       expect(result.eventInfo).toBeDefined();
       expect(result.eventInfo?.name).toBe('Test Event');
     });

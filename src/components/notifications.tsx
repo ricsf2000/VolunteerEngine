@@ -74,17 +74,17 @@ export default function Notifications({ userRole }: NotificationsProps)
   }, [userRole]);
 
   // func to load all notifs from API
-  const loadNotifications = async () => 
+  const loadNotifications = async () =>
   {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/notifications?role=${userRole}`);
-      
-      if (!response.ok) 
+      const response = await fetch('/api/notifications');
+
+      if (!response.ok)
       {
         throw new Error('Failed to fetch notifications');
       }
-      
+
       const data = await response.json();
       setNotificationsList(data.notifications);
     } catch (error) {
@@ -331,17 +331,17 @@ export default function Notifications({ userRole }: NotificationsProps)
                       {/* volunteer details (admins only) */}
                       {notification.volunteerInfo && (
                         <div className={`rounded-lg p-3 mb-3 ${
-                          !notification.isRead 
+                          !notification.isRead
                             ? `bg-gray-700/50`
                             : 'bg-gray-700/30'
                         }`}>
                           <div className="text-sm">
                             <div className={`font-medium mb-1 ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
-                              {notification.volunteerInfo.name}
+                              {notification.volunteerInfo.fullName}
                             </div>
                             <div className={`${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Skills: {notification.volunteerInfo.skills.join(', ')} • 
-                              Available: {notification.volunteerInfo.availability}
+                              Skills: {notification.volunteerInfo.skills.join(', ')} •
+                              Available: {notification.volunteerInfo.availability.join(', ')}
                             </div>
                           </div>
                         </div>

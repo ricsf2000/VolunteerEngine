@@ -6,9 +6,14 @@ import {
   sendVolunteerNotification,
 } from '@/app/lib/services/notificationActions';
 
+// mock the auth
+jest.mock('@/auth', () => ({
+  auth: jest.fn(),
+}));
+
 // mock the dal layer
 jest.mock('@/app/lib/dal/notifications', () => ({
-  getNotificationsByUserRole: jest.fn(),
+  getNotificationsByUserId: jest.fn(),
   updateNotificationReadStatus: jest.fn(),
   markAllNotificationsAsRead: jest.fn(),
   deleteNotification: jest.fn(),
@@ -16,6 +21,7 @@ jest.mock('@/app/lib/dal/notifications', () => ({
 }));
 
 import * as notificationDAL from '@/app/lib/dal/notifications';
+import { auth } from '@/auth';
 
 describe('Notification Actions (Service Layer)', () => {
   
@@ -26,124 +32,209 @@ describe('Notification Actions (Service Layer)', () => {
 
   describe('getUserNotifications', () => {
     it('should return notifications sorted by ID descending', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
       const mockNotifications = [
-        { id: 1, title: 'First', userRole: 'volunteer' },
-        { id: 3, title: 'Third', userRole: 'volunteer' },
-        { id: 2, title: 'Second', userRole: 'volunteer' },
+        { id: 1, title: 'First', userId: '2' },
+        { id: 3, title: 'Third', userId: '2' },
+        { id: 2, title: 'Second', userId: '2' },
       ] as any;
 
-      (notificationDAL.getNotificationsByUserRole as jest.Mock).mockResolvedValue(mockNotifications);
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockNotifications);
 
-      const result = await getUserNotifications('volunteer');
-      
+      const result = await getUserNotifications();
+
       expect(result[0].id).toBe(3);
       expect(result[1].id).toBe(2);
       expect(result[2].id).toBe(1);
+      expect(notificationDAL.getNotificationsByUserId).toHaveBeenCalledWith('2');
     });
 
-    it('should call DAL with correct user role', async () => {
-      (notificationDAL.getNotificationsByUserRole as jest.Mock).mockResolvedValue([]);
+    it('should return empty array when not authenticated', async () => {
+      (auth as jest.Mock).mockResolvedValue(null);
 
-      await getUserNotifications('admin');
-      
-      expect(notificationDAL.getNotificationsByUserRole).toHaveBeenCalledWith('admin');
+      const result = await getUserNotifications();
+
+      expect(result).toEqual([]);
     });
 
-    it('should throw error when DAL fails', async () => {
-      (notificationDAL.getNotificationsByUserRole as jest.Mock).mockRejectedValue(
+    it('should return empty array when DAL fails', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockRejectedValue(
         new Error('Database error')
       );
 
-      await expect(getUserNotifications('volunteer')).rejects.toThrow('Failed to load notifications');
+      const result = await getUserNotifications();
+      expect(result).toEqual([]);
     });
   });
 
   describe('toggleNotificationReadStatus', () => {
     it('should toggle from false to true', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      const mockUserNotifications = [{ id: 1, userId: '2' }];
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockUserNotifications);
+
       const mockNotification = { id: 1, isRead: true } as any;
       (notificationDAL.updateNotificationReadStatus as jest.Mock).mockResolvedValue(mockNotification);
 
       const result = await toggleNotificationReadStatus(1, false);
-      
+
       expect(notificationDAL.updateNotificationReadStatus).toHaveBeenCalledWith(1, true);
       expect(result?.isRead).toBe(true);
     });
 
     it('should toggle from true to false', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      const mockUserNotifications = [{ id: 1, userId: '2' }];
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockUserNotifications);
+
       const mockNotification = { id: 1, isRead: false } as any;
       (notificationDAL.updateNotificationReadStatus as jest.Mock).mockResolvedValue(mockNotification);
 
       const result = await toggleNotificationReadStatus(1, true);
-      
+
       expect(notificationDAL.updateNotificationReadStatus).toHaveBeenCalledWith(1, false);
       expect(result?.isRead).toBe(false);
     });
 
-    it('should throw error when notification not found', async () => {
-      (notificationDAL.updateNotificationReadStatus as jest.Mock).mockResolvedValue(null);
+    it('should return null when not authenticated', async () => {
+      (auth as jest.Mock).mockResolvedValue(null);
 
-      await expect(toggleNotificationReadStatus(999, false)).rejects.toThrow('Failed to update notification');
+      const result = await toggleNotificationReadStatus(1, false);
+      expect(result).toBeNull();
     });
 
-    it('should throw error when DAL fails', async () => {
-      (notificationDAL.updateNotificationReadStatus as jest.Mock).mockRejectedValue(
+    it('should return null when notification not owned by user', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      const mockUserNotifications = [{ id: 1, userId: '2' }];
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockUserNotifications);
+
+      const result = await toggleNotificationReadStatus(999, false);
+      expect(result).toBeNull();
+    });
+
+    it('should return null when DAL fails', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockRejectedValue(
         new Error('Database error')
       );
 
-      await expect(toggleNotificationReadStatus(1, false)).rejects.toThrow('Failed to update notification');
+      const result = await toggleNotificationReadStatus(1, false);
+      expect(result).toBeNull();
     });
   });
 
   describe('markAllUserNotificationsAsRead', () => {
     it('should return success and count when marking all as read', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
       (notificationDAL.markAllNotificationsAsRead as jest.Mock).mockResolvedValue(5);
 
       const result = await markAllUserNotificationsAsRead();
-      
+
       expect(result.success).toBe(true);
       expect(result.count).toBe(5);
+      expect(notificationDAL.markAllNotificationsAsRead).toHaveBeenCalledWith('2');
     });
 
     it('should handle zero notifications marked', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
       (notificationDAL.markAllNotificationsAsRead as jest.Mock).mockResolvedValue(0);
 
       const result = await markAllUserNotificationsAsRead();
-      
+
       expect(result.success).toBe(true);
       expect(result.count).toBe(0);
     });
 
-    it('should throw error when DAL fails', async () => {
+    it('should return failure when not authenticated', async () => {
+      (auth as jest.Mock).mockResolvedValue(null);
+
+      const result = await markAllUserNotificationsAsRead();
+      expect(result.success).toBe(false);
+      expect(result.count).toBe(0);
+    });
+
+    it('should return failure when DAL fails', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
       (notificationDAL.markAllNotificationsAsRead as jest.Mock).mockRejectedValue(
         new Error('Database error')
       );
 
-      await expect(markAllUserNotificationsAsRead()).rejects.toThrow('Failed to mark notifications as read');
+      const result = await markAllUserNotificationsAsRead();
+      expect(result.success).toBe(false);
+      expect(result.count).toBe(0);
     });
   });
 
   describe('removeNotification', () => {
     it('should successfully delete notification', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      const mockUserNotifications = [{ id: 1, userId: '2' }];
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockUserNotifications);
       (notificationDAL.deleteNotification as jest.Mock).mockResolvedValue(true);
 
       const result = await removeNotification(1);
-      
+
       expect(result.success).toBe(true);
       expect(notificationDAL.deleteNotification).toHaveBeenCalledWith(1);
     });
 
-    it('should throw error when notification not found', async () => {
-      (notificationDAL.deleteNotification as jest.Mock).mockResolvedValue(false);
+    it('should return failure when not authenticated', async () => {
+      (auth as jest.Mock).mockResolvedValue(null);
 
-      await expect(removeNotification(999)).rejects.toThrow('Failed to delete notification');
+      const result = await removeNotification(1);
+      expect(result.success).toBe(false);
     });
 
-    it('should throw error when DAL fails', async () => {
-      (notificationDAL.deleteNotification as jest.Mock).mockRejectedValue(
+    it('should return failure when notification not owned by user', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      const mockUserNotifications = [{ id: 1, userId: '2' }];
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockUserNotifications);
+
+      const result = await removeNotification(999);
+      expect(result.success).toBe(false);
+    });
+
+    it('should return failure when DAL delete fails', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      const mockUserNotifications = [{ id: 1, userId: '2' }];
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockResolvedValue(mockUserNotifications);
+      (notificationDAL.deleteNotification as jest.Mock).mockResolvedValue(false);
+
+      const result = await removeNotification(1);
+      expect(result.success).toBe(false);
+    });
+
+    it('should return failure when DAL throws error', async () => {
+      const mockSession = { user: { id: '2' } };
+      (auth as jest.Mock).mockResolvedValue(mockSession);
+
+      (notificationDAL.getNotificationsByUserId as jest.Mock).mockRejectedValue(
         new Error('Database error')
       );
 
-      await expect(removeNotification(1)).rejects.toThrow('Failed to delete notification');
+      const result = await removeNotification(1);
+      expect(result.success).toBe(false);
     });
   });
 
@@ -151,29 +242,30 @@ describe('Notification Actions (Service Layer)', () => {
     it('should create notification with valid input', async () => {
       const mockCreatedNotification = {
         id: 10,
-        userId: 1,
+        userId: '2',
         userRole: 'volunteer',
         type: 'assignment',
         title: 'Test Title',
         message: 'Test Message',
-        timestamp: 'Just now',
+        timestamp: expect.any(String),
         isRead: false,
       } as any;
 
       (notificationDAL.createNotification as jest.Mock).mockResolvedValue(mockCreatedNotification);
 
       const result = await sendVolunteerNotification(
-        1,
+        '2',
+        'volunteer',
         'assignment',
         'Test Title',
         'Test Message'
       );
-      
-      expect(result.id).toBe(10);
-      expect(result.title).toBe('Test Title');
+
+      expect(result?.id).toBe(10);
+      expect(result?.title).toBe('Test Title');
       expect(notificationDAL.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 1,
+          userId: '2',
           userRole: 'volunteer',
           type: 'assignment',
           title: 'Test Title',
@@ -185,8 +277,8 @@ describe('Notification Actions (Service Layer)', () => {
     it('should trim whitespace from title and message', async () => {
       (notificationDAL.createNotification as jest.Mock).mockResolvedValue({ id: 1 } as any);
 
-      await sendVolunteerNotification(1, 'assignment', '  Spaced Title  ', '  Spaced Message  ');
-      
+      await sendVolunteerNotification('2', 'volunteer', 'assignment', '  Spaced Title  ', '  Spaced Message  ');
+
       expect(notificationDAL.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Spaced Title',
@@ -195,22 +287,19 @@ describe('Notification Actions (Service Layer)', () => {
       );
     });
 
-    it('should throw error for empty title', async () => {
-      await expect(
-        sendVolunteerNotification(1, 'assignment', '', 'Valid Message')
-      ).rejects.toThrow('Title is required');
+    it('should return null for empty title', async () => {
+      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', '', 'Valid Message');
+      expect(result).toBeNull();
     });
 
-    it('should throw error for whitespace-only title', async () => {
-      await expect(
-        sendVolunteerNotification(1, 'assignment', '   ', 'Valid Message')
-      ).rejects.toThrow('Title is required');
+    it('should return null for whitespace-only title', async () => {
+      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', '   ', 'Valid Message');
+      expect(result).toBeNull();
     });
 
-    it('should throw error for empty message', async () => {
-      await expect(
-        sendVolunteerNotification(1, 'assignment', 'Valid Title', '')
-      ).rejects.toThrow('Message is required');
+    it('should return null for empty message', async () => {
+      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', 'Valid Title', '');
+      expect(result).toBeNull();
     });
 
     it('should include event info when provided', async () => {
@@ -223,8 +312,8 @@ describe('Notification Actions (Service Layer)', () => {
         location: 'Test Location',
       };
 
-      await sendVolunteerNotification(1, 'assignment', 'Title', 'Message', eventInfo);
-      
+      await sendVolunteerNotification('2', 'volunteer', 'assignment', 'Title', 'Message', eventInfo);
+
       expect(notificationDAL.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
           eventInfo,
@@ -232,14 +321,13 @@ describe('Notification Actions (Service Layer)', () => {
       );
     });
 
-    it('should throw error when DAL fails', async () => {
+    it('should return null when DAL fails', async () => {
       (notificationDAL.createNotification as jest.Mock).mockRejectedValue(
         new Error('Database error')
       );
 
-      await expect(
-        sendVolunteerNotification(1, 'assignment', 'Title', 'Message')
-      ).rejects.toThrow('Failed to send notification');
+      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', 'Title', 'Message');
+      expect(result).toBeNull();
     });
   });
 });

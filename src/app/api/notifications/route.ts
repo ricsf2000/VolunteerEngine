@@ -6,21 +6,11 @@ import {
   removeNotification 
 } from '@/app/lib/services/notificationActions';
 
-// GET /api/notifications?role=volunteer
+// GET /api/notifications
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const userRole = searchParams.get('role') as 'volunteer' | 'admin';
-    
-    if (!userRole || (userRole !== 'volunteer' && userRole !== 'admin')) {
-      return NextResponse.json(
-        { error: 'Invalid or missing role parameter' },
-        { status: 400 }
-      );
-    }
-    
-    const notifications = await getUserNotifications(userRole);
-    
+    const notifications = await getUserNotifications();
+
     return NextResponse.json({ notifications }, { status: 200 });
   } catch (error) {
     console.error('API Error:', error);

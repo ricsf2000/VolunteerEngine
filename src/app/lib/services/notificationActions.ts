@@ -1,106 +1,133 @@
 'use server';
 
-import { 
-  getNotificationsByUserId, 
+import { auth } from '@/auth';
+import {
+  getNotificationsByUserId,
   getNotificationsByUserRole,
   updateNotificationReadStatus,
   markAllNotificationsAsRead,
   deleteNotification,
   createNotification,
-  NotificationData 
+  NotificationData
 } from '../dal/notifications';
 
-async function getCurrentUserId(): Promise<number> {
-  // todo: get from session/auth
-  return 1;
-}
-
-export async function getUserNotifications(userRole: 'volunteer' | 'admin'): Promise<NotificationData[]> {
+export async function getUserNotifications(): Promise<NotificationData[]> {
   try {
-    const notifications = await getNotificationsByUserRole(userRole);
+    const session = await auth();
+    if (!session?.user) {
+      return [];
+    }
+
+    const userId = (session.user as any).id;
+    const notifications = await getNotificationsByUserId(userId);
     return notifications.sort((a, b) => b.id - a.id);
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    throw new Error('Failed to load notifications');
+    return [];
   }
 }
 
 export async function toggleNotificationReadStatus(
-  notificationId: number, 
+  notificationId: number,
   currentStatus: boolean
 ): Promise<NotificationData | null> {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return null;
+    }
+
+    const userId = (session.user as any).id;
+
+    // Verify ownership before allowing operation
+    const userNotifications = await getNotificationsByUserId(userId);
+    if (!userNotifications.find(n => n.id === notificationId)) {
+      return null;
+    }
+
     const newStatus = !currentStatus;
     const updated = await updateNotificationReadStatus(notificationId, newStatus);
-    
-    if (!updated) {
-      throw new Error('Notification not found');
-    }
-    
+
     return updated;
   } catch (error) {
     console.error('Error toggling notification status:', error);
-    throw new Error('Failed to update notification');
+    return null;
   }
 }
 
 export async function markAllUserNotificationsAsRead(): Promise<{ success: boolean; count: number }> {
   try {
-    const userId = await getCurrentUserId();
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, count: 0 };
+    }
+
+    const userId = (session.user as any).id;
     const count = await markAllNotificationsAsRead(userId);
     return { success: true, count };
   } catch (error) {
     console.error('Error marking all as read:', error);
-    throw new Error('Failed to mark notifications as read');
+    return { success: false, count: 0 };
   }
 }
 
 export async function removeNotification(notificationId: number): Promise<{ success: boolean }> {
   try {
-    const success = await deleteNotification(notificationId);
-    
-    if (!success) {
-      throw new Error('Notification not found');
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false };
     }
-    
-    return { success: true };
+
+    const userId = (session.user as any).id;
+
+    // Verify ownership before allowing operation
+    const userNotifications = await getNotificationsByUserId(userId);
+    if (!userNotifications.find(n => n.id === notificationId)) {
+      return { success: false };
+    }
+
+    const success = await deleteNotification(notificationId);
+
+    return { success };
   } catch (error) {
     console.error('Error deleting notification:', error);
-    throw new Error('Failed to delete notification');
+    return { success: false };
   }
 }
 
 export async function sendVolunteerNotification(
-  volunteerId: number,
+  volunteerId: string,
+  userRole: 'volunteer' | 'admin',
   type: NotificationData['type'],
   title: string,
   message: string,
   eventInfo?: NotificationData['eventInfo']
-): Promise<NotificationData> {
-  // validation outside try-catch - let these errors propagate as-is
-  if (!title || title.trim().length === 0) {
-    throw new Error('Title is required');
-  }
-  if (!message || message.trim().length === 0) {
-    throw new Error('Message is required');
-  }
-  
-  // only catch dal/database errors
+): Promise<NotificationData | null> {
   try {
+    // validation
+    if (!title || title.trim().length === 0) {
+      console.error('Title is required');
+      return null;
+    }
+    if (!message || message.trim().length === 0) {
+      console.error('Message is required');
+      return null;
+    }
+
     const notification = await createNotification({
       userId: volunteerId,
-      userRole: 'volunteer',
+      userRole,
       type,
       title: title.trim(),
       message: message.trim(),
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       isRead: false,
       eventInfo
     });
-    
+
     return notification;
   } catch (error) {
     console.error('Error sending notification:', error);
-    throw new Error('Failed to send notification');
+    return null;
   }
 }

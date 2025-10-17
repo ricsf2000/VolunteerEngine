@@ -10,9 +10,9 @@ export interface EventInfo {
 }
 
 export interface VolunteerInfo {
-  name: string;
+  fullName: string; // Changed from 'name' to match UserProfile
   skills: string[];
-  availability: string;
+  availability: string[]; // Changed from string to string[] to match UserProfile
 }
 
 export interface MatchStats {
@@ -28,7 +28,7 @@ export interface NotificationData {
   message: string;
   timestamp: string;
   isRead: boolean;
-  userId: number; // add this - which user owns this notification
+  userId: string; // Changed from number to string to match session/auth pattern
   userRole: 'volunteer' | 'admin';
   eventInfo?: EventInfo;
   volunteerInfo?: VolunteerInfo;
@@ -40,12 +40,12 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   // volunteer notifs
   {
     id: 1,
-    userId: 1,
+    userId: '2', // volunteer@test.com
     userRole: 'volunteer',
     type: 'assignment',
     title: 'New Event Assignment',
     message: 'You have been assigned to "Community Food Drive" on March 25th at Central Park.',
-    timestamp: '2 hours ago',
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     isRead: false,
     eventInfo: {
       name: 'Community Food Drive',
@@ -56,12 +56,12 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   },
   {
     id: 2,
-    userId: 1,
+    userId: '2', // volunteer@test.com
     userRole: 'volunteer',
     type: 'update',
     title: 'Event Update',
     message: 'The location for "Beach Cleanup" has been changed to Santa Monica Beach.',
-    timestamp: '5 hours ago',
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
     isRead: false,
     eventInfo: {
       name: 'Beach Cleanup',
@@ -72,12 +72,12 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   },
   {
     id: 3,
-    userId: 1,
+    userId: '2', // volunteer@test.com
     userRole: 'volunteer',
     type: 'reminder',
     title: 'Event Reminder',
     message: 'Don\'t forget about "Senior Center Visit" tomorrow at 10:00 AM.',
-    timestamp: '1 day ago',
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     isRead: true,
     eventInfo: {
       name: 'Senior Center Visit',
@@ -88,39 +88,39 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   },
   {
     id: 4,
-    userId: 1,
+    userId: '2', // volunteer@test.com
     userRole: 'volunteer',
     type: 'confirmation',
     title: 'Registration Confirmed',
     message: 'Your registration for "Tree Planting Initiative" has been confirmed.',
-    timestamp: '2 days ago',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
     isRead: true
   },
-  
+
   // admin notifs
   {
     id: 5,
-    userId: 2,
+    userId: '1', // admin@test.com
     userRole: 'admin',
     type: 'volunteer_application',
     title: 'New Volunteer Application',
     message: 'Sarah Johnson has applied to volunteer for upcoming community events.',
-    timestamp: '1 hour ago',
+    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
     isRead: false,
     volunteerInfo: {
-      name: 'Sarah Johnson',
+      fullName: 'Sarah Johnson',
       skills: ['Event Planning', 'Communication'],
-      availability: 'Weekends'
+      availability: ['2025-01-18', '2025-01-19'] // Changed to array of dates
     }
   },
   {
     id: 6,
-    userId: 2,
+    userId: '1', // admin@test.com
     userRole: 'admin',
     type: 'event_full',
     title: 'Event Capacity Reached',
     message: 'The "Community Garden Project" has reached maximum volunteer capacity (25/25).',
-    timestamp: '3 hours ago',
+    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
     isRead: false,
     eventInfo: {
       name: 'Community Garden Project',
@@ -131,12 +131,12 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   },
   {
     id: 7,
-    userId: 2,
+    userId: '1', // admin@test.com
     userRole: 'admin',
     type: 'matching_complete',
     title: 'Volunteer Matching Complete',
     message: 'Automated matching has been completed for 15 volunteers across 8 upcoming events.',
-    timestamp: '6 hours ago',
+    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
     isRead: true,
     matchStats: {
       volunteersMatched: 15,
@@ -146,12 +146,12 @@ const NOTIFICATIONS_DB: NotificationData[] = [
   },
   {
     id: 8,
-    userId: 2,
+    userId: '1', // admin@test.com
     userRole: 'admin',
     type: 'volunteer_dropout',
     title: 'Volunteer Withdrawal',
     message: 'Michael Chen has withdrawn from "Homeless Shelter Support" due to scheduling conflict.',
-    timestamp: '1 day ago',
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     isRead: false,
     eventInfo: {
       name: 'Homeless Shelter Support',
@@ -163,10 +163,10 @@ const NOTIFICATIONS_DB: NotificationData[] = [
 
 // dal functions - pure database operations (no business logic!)
 
-export async function getNotificationsByUserId(userId: number): Promise<NotificationData[]> {
+export async function getNotificationsByUserId(userId: string): Promise<NotificationData[]> {
   // simulate database query delay
   await new Promise(resolve => setTimeout(resolve, 300));
-  
+
   // in real implementation: select * from notifications where user_id = $1
   return NOTIFICATIONS_DB.filter(notif => notif.userId === userId);
 }
@@ -193,9 +193,9 @@ export async function updateNotificationReadStatus(
   return null;
 }
 
-export async function markAllNotificationsAsRead(userId: number): Promise<number> {
+export async function markAllNotificationsAsRead(userId: string): Promise<number> {
   await new Promise(resolve => setTimeout(resolve, 300));
-  
+
   // in real implementation: update notifications set is_read = true where user_id = $1
   const userNotifications = NOTIFICATIONS_DB.filter(n => n.userId === userId);
   userNotifications.forEach(n => n.isRead = true);
