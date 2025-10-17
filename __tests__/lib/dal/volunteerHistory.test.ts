@@ -1,17 +1,14 @@
 import {
   getHistoryByUserId,
+  getHistoryById,
   createVolunteerHistory,
   updateVolunteerHistory,
   VolunteerHistory,
   CreateVolunteerHistoryInput,
-  UpdateVolunteerHistoryInput,
-  resetVolunteerHistory
+  UpdateVolunteerHistoryInput
 } from '@/app/lib/dal/volunteerHistory';
 
 describe('volunteerHistory DAL', () => {
-  beforeEach(() => {
-    if (typeof resetVolunteerHistory === 'function') resetVolunteerHistory();
-  });
   describe('getHistoryByUserId', () => {
     it('should return history for existing user', async () => {
       const history = await getHistoryByUserId('2');
@@ -43,6 +40,41 @@ describe('volunteerHistory DAL', () => {
     });
   });
 
+  describe('getHistoryById', () => {
+    it('should return history entry for existing ID', async () => {
+      const entry = await getHistoryById('1');
+
+      expect(entry).toBeTruthy();
+      expect(entry?.id).toBe('1');
+      expect(entry?.userId).toBe('2');
+      expect(entry?.eventId).toBe('1');
+    });
+
+    it('should return null for non-existent ID', async () => {
+      const entry = await getHistoryById('999');
+
+      expect(entry).toBeNull();
+    });
+
+    it('should return null for empty ID', async () => {
+      const entry = await getHistoryById('');
+
+      expect(entry).toBeNull();
+    });
+
+    it('should return correct history entry structure', async () => {
+      const entry = await getHistoryById('1');
+
+      expect(entry).toHaveProperty('id');
+      expect(entry).toHaveProperty('userId');
+      expect(entry).toHaveProperty('eventId');
+      expect(entry).toHaveProperty('participantStatus');
+      expect(entry).toHaveProperty('registrationDate');
+      expect(entry).toHaveProperty('createdAt');
+      expect(entry).toHaveProperty('updatedAt');
+    });
+  });
+
   describe('createVolunteerHistory', () => {
     const validInput: CreateVolunteerHistoryInput = {
       userId: 'test-user-123',
@@ -57,7 +89,7 @@ describe('volunteerHistory DAL', () => {
       expect(newHistory).toBeTruthy();
       expect(newHistory.userId).toBe(validInput.userId);
       expect(newHistory.eventId).toBe(validInput.eventId);
-      expect(newHistory.registrationDate.getTime()).toBe(validInput.registrationDate.getTime());
+      expect(newHistory.registrationDate).toBe(validInput.registrationDate);
       expect(newHistory.participantStatus).toBe(validInput.participantStatus);
       expect(newHistory.id).toBeTruthy();
       expect(newHistory.createdAt).toBeInstanceOf(Date);
@@ -75,8 +107,8 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should create history with different statuses', async () => {
-      const completedInput = { ...validInput, participantStatus: 'confirmed' } as CreateVolunteerHistoryInput;
-      const cancelledInput = { ...validInput, participantStatus: 'cancelled', userId: 'user-cancelled' } as CreateVolunteerHistoryInput;
+      const completedInput = { ...validInput, participantStatus: 'confirmed' };
+      const cancelledInput = { ...validInput, participantStatus: 'cancelled', userId: 'user-cancelled' };
 
       const completedHistory = await createVolunteerHistory(completedInput);
       const cancelledHistory = await createVolunteerHistory(cancelledInput);
@@ -107,7 +139,7 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should handle partial updates', async () => {
-      const partialUpdate = { participantStatus: 'pending' } as UpdateVolunteerHistoryInput;
+      const partialUpdate = { participantStatus: 'pending' };
       
       const updatedHistory = await updateVolunteerHistory('1', partialUpdate);
 
@@ -116,7 +148,7 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should preserve unchanged fields', async () => {
-      const partialUpdate = { participantStatus: 'cancelled' } as UpdateVolunteerHistoryInput;
+      const partialUpdate = { participantStatus: 'cancelled' };
       
       const updatedHistory = await updateVolunteerHistory('1', partialUpdate);
 

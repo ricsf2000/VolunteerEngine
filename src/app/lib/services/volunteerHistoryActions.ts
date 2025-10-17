@@ -2,7 +2,8 @@
 
 import { auth } from '@/auth';
 import * as volunteerHistoryDAL from '../dal/volunteerHistory';
-import type { CreateVolunteerHistoryInput, EnrichedVolunteerHistory } from '../dal/volunteerHistory';
+import { getEventById } from '../dal/eventDetails';
+import type { CreateVolunteerHistoryInput,VolunteerHistory } from '../dal/volunteerHistory';
 
 /**
  * Standard response format for all service functions
@@ -12,33 +13,57 @@ type ServiceResponse<T> =
   | { success: false; error: string };
 
 /**
- * Get volunteer history for the authenticated user (with enriched event/user data)
+ * Enriched history entry with event details
+ */
+export type EnrichedHistory = volunteerHistoryDAL.VolunteerHistory & {
+  eventName?: string;
+  eventDescription?: string;
+  eventLocation?: string;
+  eventSkills?: string[];
+  eventUrgency?: string;
+  eventDate?: Date;
+};
+
+/**
+ * Get volunteer history for the authenticated user with enriched event details
  *
  * @param userId - Optional user ID (if not provided, uses authenticated user)
- * @returns User's volunteer history with event and user details or error
+ * @returns User's volunteer history with event details or error
  */
-export async function getHistory(userId?: string): Promise<ServiceResponse<EnrichedVolunteerHistory[]>> {
+export async function getHistory(
+  userId?: string
+): Promise<ServiceResponse<EnrichedHistory[]>> {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return { success: false, error: 'Not authenticated' };
-    }
+    if (!session?.user) return { success: false, error: 'Not authenticated' };
 
-    // Use provided userId or get from session
-    const targetUserId = userId || (session.user as any).id;
-
-    // Authorization: users can only see their own history (unless admin)
     const sessionUserId = (session.user as any).id;
     const userRole = (session.user as any).role;
+    const targetUserId = userId || sessionUserId;
 
     if (userRole !== 'admin' && sessionUserId !== targetUserId) {
       return { success: false, error: 'Unauthorized to view this history' };
     }
 
-    // Use enriched history with event and user details
-    const history = await volunteerHistoryDAL.getEnrichedHistoryByUserId(targetUserId);
-    return { success: true, data: history };
+    const history = await volunteerHistoryDAL.getHistoryByUserId(targetUserId);
 
+    // Enrich history with event details
+    const enrichedHistory: EnrichedHistory[] = await Promise.all(
+      history.map(async (entry) => {
+        const event = await getEventById(entry.eventId);
+        return {
+          ...entry,
+          eventName: event?.eventName,
+          eventDescription: event?.description,
+          eventLocation: event?.location,
+          eventSkills: event?.requiredSkills,
+          eventUrgency: event?.urgency,
+          eventDate: event?.eventDate,
+        };
+      })
+    );
+
+    return { success: true, data: enrichedHistory };
   } catch (error) {
     console.error('Error fetching volunteer history:', error);
     return { success: false, error: 'Failed to fetch volunteer history' };
@@ -103,16 +128,19 @@ export async function createHistoryEntry(data: any): Promise<ServiceResponse<vol
       return { success: false, error: 'Not authenticated' };
     }
 
+    const sessionUserId = (session.user as any).id;
+    const userRole = (session.user as any).role;
+
     // ===== VALIDATION: User ID =====
-    if (!data.userId || data.userId.trim().length === 0) {
+    // If userId not provided, use session user ID (for volunteer self-registration)
+    const targetUserId = data.userId || sessionUserId;
+
+    if (!targetUserId || targetUserId.trim().length === 0) {
       return { success: false, error: 'User ID is required' };
     }
 
     // Authorization: only admins can create history for other users
-    const sessionUserId = (session.user as any).id;
-    const userRole = (session.user as any).role;
-
-    if (userRole !== 'admin' && data.userId !== sessionUserId) {
+    if (userRole !== 'admin' && targetUserId !== sessionUserId) {
       return { success: false, error: 'Unauthorized to create history for other users' };
     }
 
@@ -147,7 +175,7 @@ export async function createHistoryEntry(data: any): Promise<ServiceResponse<vol
 
     // ===== CREATE HISTORY ENTRY =====
     const historyInput: CreateVolunteerHistoryInput = {
-      userId: data.userId.trim(),
+      userId: targetUserId.trim(),
       eventId: data.eventId.trim(),
       participantStatus: data.participantStatus,
       registrationDate: registrationDate,
@@ -219,25 +247,19 @@ export async function updateHistoryStatus(
  *
  * @returns All history entries with event and user details or error
  */
-export async function getAllHistory(): Promise<ServiceResponse<EnrichedVolunteerHistory[]>> {
+export async function getAllHistory(): Promise<ServiceResponse<VolunteerHistory[]>> {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return { success: false, error: 'Not authenticated' };
-    }
+    if (!session?.user) return { success: false, error: 'Not authenticated' };
 
-    // Only admins can view all history
-    const userRole = (session.user as any).role;
-    if (userRole !== 'admin') {
+    if ((session.user as any).role !== 'admin') {
       return { success: false, error: 'Unauthorized - Admin access required' };
     }
 
-    // Get all enriched history
-    const history = await volunteerHistoryDAL.getAllEnrichedHistory();
-    return { success: true, data: history };
-
+    const rows = await volunteerHistoryDAL.getAllHistory();
+    return { success: true, data: rows };
   } catch (error) {
-    console.error('Error fetching all history:', error);
-    return { success: false, error: 'Failed to fetch history' };
+    console.error('Error fetching history:', error);
+    return { success: false, error: 'Failed to fetch volunteer history' };
   }
 }

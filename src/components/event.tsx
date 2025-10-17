@@ -55,6 +55,9 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 	// Local saved flag to show success feedback (mock behavior)
 	const [saved, setSaved] = useState(false);
 
+	// Loading state to prevent double submission
+	const [submitting, setSubmitting] = useState(false);
+
 	// Static list of available skills (memoized to avoid recreating on each render)
 	const allSkills = useMemo(() => ["Event Planning", "First Aid", "Crowd Control", "Logistics", "Communication"], []);
 	const skillOptions = useMemo(() => allSkills.map(s => ({ text: s, value: s })), [allSkills]);
@@ -96,9 +99,15 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 	 */
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
+
+		// Prevent double submission
+		if (submitting) return;
+
 		setSaved(false);
 		setErrors({}); // Clear previous errors
 		if (!validate()) return; // bail out on validation errors
+
+		setSubmitting(true); // Set loading state
 
 		try {
 			// Combine date and time into a single ISO date string
@@ -136,6 +145,8 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 		} catch (error) {
 			console.error('Error saving event:', error);
 			setErrors({ submit: 'Failed to connect to server' });
+		} finally {
+			setSubmitting(false); // Always reset loading state
 		}
 	};
 
@@ -183,9 +194,10 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 			setEventDate("");
 			setEventTime("");
 		}
-		// Clear errors and saved flag whenever editingEvent changes
+		// Clear errors, saved flag, and submitting state whenever editingEvent changes
 		setErrors({});
 		setSaved(false);
+		setSubmitting(false);
 	}, [editingEvent]);
 
 	// If not open, render nothing — the parent controls visibility
@@ -319,8 +331,19 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 
 					{/* Submit button */}
 					<div className="pt-2 pb-6">
-						<button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-black font-medium">
-							{editingEvent ? "Update Event" : "Create Event"}
+						<button
+							type="submit"
+							disabled={submitting}
+							className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-black font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							{submitting ? (
+								<>
+									<span className="animate-spin">⏳</span>
+									{editingEvent ? "Updating..." : "Creating..."}
+								</>
+							) : (
+								<>{editingEvent ? "Update Event" : "Create Event"}</>
+							)}
 						</button>
 					</div>
 				</form>

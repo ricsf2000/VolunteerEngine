@@ -2,6 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
+import { SessionProvider } from "next-auth/react";
+
 import {
   Calendar,
   MapPin,
@@ -35,7 +37,8 @@ const urgencyUI: Record<EventItem["urgency"], { chip: string; icon: string }> = 
 
 const WORD_LIMIT = 40;
 
-export default function VolunteerEvents() {
+function VolunteerEventsContent() {
+  const { data: session, status: sessionStatus } = useSession();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +47,19 @@ export default function VolunteerEvents() {
   // Fetch volunteer's assigned events from backend
   useEffect(() => {
     const fetchVolunteerEvents = async () => {
+      if (sessionStatus === "loading") return;
+      if (!session?.user) {
+        setError("Not authenticated");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
-        // The backend will get userId from the session
-        const response = await fetch('/api/volunteerHistory', {
+        const userId = (session.user as any).id;
+        const response = await fetch(`/api/volunteerHistory?userId=${userId}`, {
           cache: 'no-store',
         });
 
@@ -84,7 +94,7 @@ export default function VolunteerEvents() {
     };
 
     fetchVolunteerEvents();
-  }, []);
+  }, [session, sessionStatus]);
 
   const confirmEvent = async (historyId: string, eventId: string) => {
     try {
@@ -324,5 +334,13 @@ function EmptyState() {
       <h3 className="text-lg font-semibold text-slate-100 mb-2">No assigned events</h3>
       <p className="text-slate-400">You'll see events here when you're assigned to one.</p>
     </div>
+  );
+}
+
+export default function VolunteerEvents() {
+  return (
+    <SessionProvider>
+      <VolunteerEventsContent />
+    </SessionProvider>
   );
 }
