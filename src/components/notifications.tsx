@@ -4,15 +4,213 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Clock, MapPin, Users, Calendar, CheckCircle, AlertCircle, Info, X, Loader2 } from 'lucide-react';
 import { Loading } from './Loading';
 
-// import types from dal
-import type { NotificationData } from '@/app/lib/dal/notifications';
+// event info interface
+interface eventInfo 
+{
+  name: string;
+  date: string;
+  location?: string;
+  time?: string;
+  volunteers?: number;
+  maxVolunteers?: number;
+  openSpots?: number;
+}
 
-type UserRole = 'volunteer' | 'admin';
+// volunteer info interface
+interface volunteerInfo 
+{
+  name: string;
+  skills: string[];
+  availability: string;
+}
+
+// stats for matching
+interface matchStats 
+{
+  volunteersMatched: number;
+  eventsCount: number;
+  efficiency: string;
+}
+
+// main notif interface
+interface notificationData 
+{
+  id: number;
+  type: 'assignment' | 'update' | 'reminder' | 'confirmation' | 'volunteer_application' | 'event_full' | 'matching_complete' | 'volunteer_dropout' | 'cancellation';
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  eventInfo?: eventInfo;
+  volunteerInfo?: volunteerInfo;
+  matchStats?: matchStats;
+}
+
+type userRole = 'volunteer' | 'admin';
+
+// dummy data for testing
+const dummyData: Record<userRole, notificationData[]> = 
+{
+  volunteer: 
+  [
+    {
+      id: 1,
+      type: 'assignment',
+      title: 'New Event Assignment',
+      message: 'You have been assigned to "Community Food Drive" on March 25th at Central Park.',
+      timestamp: '2 hours ago',
+      isRead: false,
+      eventInfo: 
+      {
+        name: 'Community Food Drive',
+        date: 'March 25, 2024',
+        location: 'Central Park',
+        time: '9:00 AM - 2:00 PM'
+      }
+    },
+    {
+      id: 2,
+      type: 'update',
+      title: 'Event Update',
+      message: 'The location for "Beach Cleanup" has been changed to Santa Monica Beach.',
+      timestamp: '5 hours ago',
+      isRead: false,
+      eventInfo: 
+      {
+        name: 'Beach Cleanup',
+        date: 'March 28, 2024',
+        location: 'Santa Monica Beach',
+        time: '8:00 AM - 12:00 PM'
+      }
+    },
+    {
+      id: 3,
+      type: 'reminder',
+      title: 'Event Reminder',
+      message: 'Don\'t forget about "Senior Center Visit" tomorrow at 10:00 AM.',
+      timestamp: '1 day ago',
+      isRead: true,
+      eventInfo: 
+      {
+        name: 'Senior Center Visit',
+        date: 'March 22, 2024',
+        location: 'Sunrise Senior Center',
+        time: '10:00 AM - 1:00 PM'
+      }
+    },
+    {
+      id: 4,
+      type: 'confirmation',
+      title: 'Registration Confirmed',
+      message: 'Your registration for "Tree Planting Initiative" has been confirmed.',
+      timestamp: '2 days ago',
+      isRead: true
+    }
+  ],
+  admin: 
+  [
+    {
+      id: 1,
+      type: 'volunteer_application',
+      title: 'New Volunteer Application',
+      message: 'Sarah Johnson has applied to volunteer for upcoming community events.',
+      timestamp: '1 hour ago',
+      isRead: false,
+      volunteerInfo: 
+      {
+        name: 'Sarah Johnson',
+        skills: ['Event Planning', 'Communication'],
+        availability: 'Weekends'
+      }
+    },
+    {
+      id: 2,
+      type: 'event_full',
+      title: 'Event Capacity Reached',
+      message: 'The "Community Garden Project" has reached maximum volunteer capacity (25/25).',
+      timestamp: '3 hours ago',
+      isRead: false,
+      eventInfo: 
+      {
+        name: 'Community Garden Project',
+        date: 'March 27, 2024',
+        volunteers: 25,
+        maxVolunteers: 25
+      }
+    },
+    {
+      id: 3,
+      type: 'matching_complete',
+      title: 'Volunteer Matching Complete',
+      message: 'Automated matching has been completed for 15 volunteers across 8 upcoming events.',
+      timestamp: '6 hours ago',
+      isRead: true,
+      matchStats: 
+      {
+        volunteersMatched: 15,
+        eventsCount: 8,
+        efficiency: '94%'
+      }
+    },
+    {
+      id: 4,
+      type: 'volunteer_dropout',
+      title: 'Volunteer Withdrawal',
+      message: 'Michael Chen has withdrawn from "Homeless Shelter Support" due to scheduling conflict.',
+      timestamp: '1 day ago',
+      isRead: false,
+      eventInfo: 
+      {
+        name: 'Homeless Shelter Support',
+        date: 'March 26, 2024',
+        openSpots: 2
+      }
+    }
+  ]
+};
+
+// fake api for testing
+const fakeApi = 
+{
+  // simulate loading time
+  delay: () => new Promise(resolve => setTimeout(resolve, 500)),
+  
+  async getNotifications(userRole: userRole): Promise<notificationData[]> 
+  {
+    await this.delay();
+    return dummyData[userRole];
+  },
+  
+  async markAsRead(id: number): Promise<{ success: boolean }> 
+  {
+    await this.delay();
+    return { success: true };
+  },
+  
+  async markAsUnread(id: number): Promise<{ success: boolean }> 
+  {
+    await this.delay();
+    return { success: true };
+  },
+  
+  async markAllAsRead(userRole: userRole): Promise<{ success: boolean }> 
+  {
+    await this.delay();
+    return { success: true };
+  },
+  
+  async deleteNotification(id: number): Promise<{ success: boolean }> 
+  {
+    await this.delay();
+    return { success: true };
+  }
+};
 
 // helper func to get the right icon for notif type
 const getIcon = (type: string) => 
 {
-  switch (type) {
+  switch (type) 
+  {
     case 'assignment':
     case 'volunteer_application':
       return <Users className="w-5 h-5" />;
@@ -33,7 +231,7 @@ const getIcon = (type: string) =>
 };
 
 // helper func for notif card colors
-const getCardColors = (isRead: boolean, userRole: UserRole) => 
+const getCardColors = (isRead: boolean, userRole: userRole) => 
 {
   if (isRead) 
   {
@@ -45,7 +243,7 @@ const getCardColors = (isRead: boolean, userRole: UserRole) =>
 };
 
 // helper func for icon colors
-const getIconColors = (isRead: boolean, userRole: UserRole) => 
+const getIconColors = (isRead: boolean, userRole: userRole) => 
 {
   if (isRead) 
   {
@@ -54,15 +252,15 @@ const getIconColors = (isRead: boolean, userRole: UserRole) =>
   return userRole === 'volunteer' ? 'text-blue-400' : 'text-green-400';
 };
 
-interface NotificationsProps 
+interface notificationsProps 
 {
-  userRole: UserRole;
+  userRole: userRole;
 }
 
-export default function Notifications({ userRole }: NotificationsProps) 
+export default function notifications({ userRole }: notificationsProps) 
 {
   // state vars
-  const [notificationsList, setNotificationsList] = useState<NotificationData[]>([]);
+  const [notificationsList, setNotificationsList] = useState<notificationData[]>([]);
   const [currentFilter, setCurrentFilter] = useState<'all' | 'unread'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -73,105 +271,87 @@ export default function Notifications({ userRole }: NotificationsProps)
     loadNotifications();
   }, [userRole]);
 
-  // func to load all notifs from API
+  // func to load all notifs
   const loadNotifications = async () => 
   {
     setIsLoading(true);
-    try {
-      const response = await fetch(`/api/notifications?role=${userRole}`);
-      
-      if (!response.ok) 
-      {
-        throw new Error('Failed to fetch notifications');
-      }
-      
-      const data = await response.json();
-      setNotificationsList(data.notifications);
-    } catch (error) {
-      console.error('Could not load notifications:', error);
-    } finally {
+    try 
+    {
+      const data = await fakeApi.getNotifications(userRole);
+      setNotificationsList(data);
+    } 
+    catch (error) 
+    {
+      console.error('couldnt load notifications:', error);
+    } 
+    finally 
+    {
       setIsLoading(false);
     }
   };
 
-  // toggle read/unread status via API
-  const toggleReadStatus = async (id: number, currentStatus: boolean) => {
+  // toggle read/unread status
+  const toggleReadStatus = async (id: number, currentStatus: boolean) => 
+  {
     setLoadingAction(`toggle-${id}`);
-    try {
-      const response = await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'toggle-read',
-          notificationId: id,
-          currentStatus
-        })
-      });
-      
-      if (!response.ok) 
+    try 
+    {
+      if (currentStatus) 
       {
-        throw new Error('Failed to toggle read status');
+        await fakeApi.markAsUnread(id);
+      } 
+      else 
+      {
+        await fakeApi.markAsRead(id);
       }
-      
-      const data = await response.json();
-      
-      // update local state
-      setNotificationsList(prev =>
-        prev.map(notif => notif.id === id ? data.notification : notif)
+      setNotificationsList(prev => 
+        prev.map(notif => notif.id === id ? { ...notif, isRead: !currentStatus } : notif)
       );
-    } catch (error) {
-      console.error('Failed to toggle read status:', error);
-    } finally {
+    } 
+    catch (error) 
+    {
+      console.error('failed to toggle read status:', error);
+    } 
+    finally 
+    {
       setLoadingAction(null);
     }
   };
 
-  // mark all notifs as read via API
+  // mark all notifs as read
   const markAllAsRead = async () => 
   {
     setLoadingAction('mark-all');
-    try {
-      const response = await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark-all-read' })
-      });
-      
-      if (!response.ok) 
-      {
-        throw new Error('Failed to mark all as read');
-      }
-      
-      // update local state
+    try 
+    {
+      await fakeApi.markAllAsRead(userRole);
       setNotificationsList(prev => prev.map(notif => ({ ...notif, isRead: true })));
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
-    } finally {
+    } 
+    catch (error) 
+    {
+      console.error('failed to mark all as read:', error);
+    } 
+    finally 
+    {
       setLoadingAction(null);
     }
   };
 
-  // delete a notif via API
+  // delete a notif
   const deleteNotification = async (id: number) => 
   {
     setLoadingAction(`delete-${id}`);
-    try {
-      const response = await fetch('/api/notifications', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId: id })
-      });
-      
-      if (!response.ok) 
-      {
-        throw new Error('Failed to delete notification');
-      }
-      
-      // update local state
+    try 
+    {
+      await fakeApi.deleteNotification(id);
       setNotificationsList(prev => prev.filter(notif => notif.id !== id));
-    } catch (error) {
-      console.error('Failed to delete notification:', error);
-    } finally {
+    } 
+    catch (error) 
+    {
+      console.error('failed to delete notification:', error);
+    } 
+    finally 
+    {
       setLoadingAction(null);
     }
   };
@@ -180,7 +360,6 @@ export default function Notifications({ userRole }: NotificationsProps)
   const filteredNotifications = notificationsList.filter(notif => 
   {
     if (currentFilter === 'unread') return !notif.isRead;
-    
     return true;
   });
 
@@ -240,6 +419,7 @@ export default function Notifications({ userRole }: NotificationsProps)
           >
             Unread ({unreadCount})
           </button>
+
         </div>
         {unreadCount > 0 && (
           <button
