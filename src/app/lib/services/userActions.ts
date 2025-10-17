@@ -66,7 +66,7 @@ export async function saveProfile(profileData: any) {
     
   } catch (error: any) {
     console.error('Error saving profile:', error);
-    return { success: false, error: error.message || 'Failed to save profile' };
+    return { success: false, error: error?.message || 'Failed to save profile' };
   }
 }
 

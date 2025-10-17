@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { getUserCredentialsByEmailAndRole } from '@/app/lib/dal/userCredentials';
 import bcrypt from 'bcrypt';
  
-async function getUser(email: string, role: string) {
+export async function getUser(email: string, role: string) {
   try {
     return await getUserCredentialsByEmailAndRole(email, role);
   } catch (error) {
