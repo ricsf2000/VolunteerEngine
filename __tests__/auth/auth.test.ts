@@ -135,7 +135,7 @@ describe('Auth Business Logic', () => {
       const auth = null;
       const nextUrl = { pathname: '/admin/dashboard' };
 
-      const isLoggedIn = !!auth?.user;
+      const isLoggedIn = !!(auth as any)?.user;
       const isOnAdmin = nextUrl.pathname.startsWith('/admin');
 
       const authorized = isLoggedIn && isOnAdmin;
@@ -175,7 +175,7 @@ describe('Auth Business Logic', () => {
 
     it('should handle missing token data gracefully', () => {
       const session = { user: {} };
-      const token = {};
+      const token = {} as any;
 
       // Simulate session callback logic
       if (token?.role) {
