@@ -39,7 +39,7 @@ export async function toggleNotificationReadStatus(
 
     const userId = (session.user as any).id;
 
-    // Verify ownership before allowing operation
+    // verify ownership before allowing operation
     const userNotifications = await getNotificationsByUserId(userId);
     if (!userNotifications.find(n => n.id === notificationId)) {
       return null;
@@ -80,7 +80,7 @@ export async function removeNotification(notificationId: number): Promise<{ succ
 
     const userId = (session.user as any).id;
 
-    // Verify ownership before allowing operation
+    // verify ownership before allowing operation
     const userNotifications = await getNotificationsByUserId(userId);
     if (!userNotifications.find(n => n.id === notificationId)) {
       return { success: false };

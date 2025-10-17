@@ -10,9 +10,9 @@ export interface EventInfo {
 }
 
 export interface VolunteerInfo {
-  fullName: string; // Changed from 'name' to match UserProfile
+  fullName: string; 
   skills: string[];
-  availability: string[]; // Changed from string to string[] to match UserProfile
+  availability: string[]; 
 }
 
 export interface MatchStats {
@@ -28,7 +28,7 @@ export interface NotificationData {
   message: string;
   timestamp: string;
   isRead: boolean;
-  userId: string; // Changed from number to string to match session/auth pattern
+  userId: string; 
   userRole: 'volunteer' | 'admin';
   eventInfo?: EventInfo;
   volunteerInfo?: VolunteerInfo;
@@ -110,7 +110,7 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     volunteerInfo: {
       fullName: 'Sarah Johnson',
       skills: ['Event Planning', 'Communication'],
-      availability: ['2025-01-18', '2025-01-19'] // Changed to array of dates
+      availability: ['2025-01-18', '2025-01-19'] // changed to array of dates
     }
   },
   {
