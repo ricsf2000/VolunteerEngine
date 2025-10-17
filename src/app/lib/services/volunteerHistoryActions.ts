@@ -1,27 +1,8 @@
-/**
- * Volunteer History Actions Service Layer
- *
- * This file contains all business logic and validation for Volunteer History Management.
- * It acts as an intermediary between the API routes and the Data Access Layer (DAL).
- *
- * Responsibilities:
- * - Validate all volunteer history data (required fields, field types)
- * - Enforce business rules (status validation, authorization)
- * - Call DAL functions for data operations
- * - Handle errors and return consistent response format
- *
- * Methods:
- * - getHistory(userId): Get volunteer history for a user
- * - createHistoryEntry(data): Create a new history entry with validation
- * - updateHistoryStatus(id, status): Update participation status
- * - getHistoryById(id): Get a single history entry by ID
- */
-
 'use server';
 
 import { auth } from '@/auth';
 import * as volunteerHistoryDAL from '../dal/volunteerHistory';
-import type { CreateVolunteerHistoryInput } from '../dal/volunteerHistory';
+import type { CreateVolunteerHistoryInput, EnrichedVolunteerHistory } from '../dal/volunteerHistory';
 
 /**
  * Standard response format for all service functions
@@ -31,12 +12,12 @@ type ServiceResponse<T> =
   | { success: false; error: string };
 
 /**
- * Get volunteer history for the authenticated user
+ * Get volunteer history for the authenticated user (with enriched event/user data)
  *
  * @param userId - Optional user ID (if not provided, uses authenticated user)
- * @returns User's volunteer history or error
+ * @returns User's volunteer history with event and user details or error
  */
-export async function getHistory(userId?: string): Promise<ServiceResponse<volunteerHistoryDAL.VolunteerHistory[]>> {
+export async function getHistory(userId?: string): Promise<ServiceResponse<EnrichedVolunteerHistory[]>> {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -54,7 +35,8 @@ export async function getHistory(userId?: string): Promise<ServiceResponse<volun
       return { success: false, error: 'Unauthorized to view this history' };
     }
 
-    const history = await volunteerHistoryDAL.getHistoryByUserId(targetUserId);
+    // Use enriched history with event and user details
+    const history = await volunteerHistoryDAL.getEnrichedHistoryByUserId(targetUserId);
     return { success: true, data: history };
 
   } catch (error) {
@@ -81,13 +63,17 @@ export async function getHistoryById(id: string): Promise<ServiceResponse<volunt
       return { success: false, error: 'History ID is required' };
     }
 
-    // For now, we need to implement getHistoryById in DAL
-    // Temporary workaround: get all history and find by ID
-    const allHistory = await volunteerHistoryDAL.getHistoryByUserId((session.user as any).id);
-    const entry = allHistory.find(h => h.id === id);
-
+    // Use dedicated DAL lookup by ID
+    const entry = await volunteerHistoryDAL.getHistoryById(id);
     if (!entry) {
       return { success: false, error: 'History entry not found' };
+    }
+
+    // Authorization: only admins or the owner can view the entry
+    const sessionUserId = (session.user as any).id;
+    const userRole = (session.user as any).role;
+    if (userRole !== 'admin' && entry.userId !== sessionUserId) {
+      return { success: false, error: 'Unauthorized to view this history' };
     }
 
     return { success: true, data: entry };
@@ -229,11 +215,11 @@ export async function updateHistoryStatus(
 }
 
 /**
- * Get all volunteer history entries (admin only)
+ * Get all volunteer history entries (admin only) with enriched data
  *
- * @returns All history entries or error
+ * @returns All history entries with event and user details or error
  */
-export async function getAllHistory(): Promise<ServiceResponse<volunteerHistoryDAL.VolunteerHistory[]>> {
+export async function getAllHistory(): Promise<ServiceResponse<EnrichedVolunteerHistory[]>> {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -246,9 +232,9 @@ export async function getAllHistory(): Promise<ServiceResponse<volunteerHistoryD
       return { success: false, error: 'Unauthorized - Admin access required' };
     }
 
-    // Note: We need to add getAllHistory to DAL
-    // For now, return error
-    return { success: false, error: 'Not implemented yet' };
+    // Get all enriched history
+    const history = await volunteerHistoryDAL.getAllEnrichedHistory();
+    return { success: true, data: history };
 
   } catch (error) {
     console.error('Error fetching all history:', error);

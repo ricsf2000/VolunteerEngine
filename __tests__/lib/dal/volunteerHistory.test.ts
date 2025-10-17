@@ -4,10 +4,14 @@ import {
   updateVolunteerHistory,
   VolunteerHistory,
   CreateVolunteerHistoryInput,
-  UpdateVolunteerHistoryInput
+  UpdateVolunteerHistoryInput,
+  resetVolunteerHistory
 } from '@/app/lib/dal/volunteerHistory';
 
 describe('volunteerHistory DAL', () => {
+  beforeEach(() => {
+    if (typeof resetVolunteerHistory === 'function') resetVolunteerHistory();
+  });
   describe('getHistoryByUserId', () => {
     it('should return history for existing user', async () => {
       const history = await getHistoryByUserId('2');
@@ -53,7 +57,7 @@ describe('volunteerHistory DAL', () => {
       expect(newHistory).toBeTruthy();
       expect(newHistory.userId).toBe(validInput.userId);
       expect(newHistory.eventId).toBe(validInput.eventId);
-      expect(newHistory.registrationDate).toBe(validInput.registrationDate);
+      expect(newHistory.registrationDate.getTime()).toBe(validInput.registrationDate.getTime());
       expect(newHistory.participantStatus).toBe(validInput.participantStatus);
       expect(newHistory.id).toBeTruthy();
       expect(newHistory.createdAt).toBeInstanceOf(Date);
@@ -71,8 +75,8 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should create history with different statuses', async () => {
-      const completedInput = { ...validInput, participantStatus: 'confirmed' };
-      const cancelledInput = { ...validInput, participantStatus: 'cancelled', userId: 'user-cancelled' };
+      const completedInput = { ...validInput, participantStatus: 'confirmed' } as CreateVolunteerHistoryInput;
+      const cancelledInput = { ...validInput, participantStatus: 'cancelled', userId: 'user-cancelled' } as CreateVolunteerHistoryInput;
 
       const completedHistory = await createVolunteerHistory(completedInput);
       const cancelledHistory = await createVolunteerHistory(cancelledInput);
@@ -103,7 +107,7 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should handle partial updates', async () => {
-      const partialUpdate = { participantStatus: 'pending' };
+      const partialUpdate = { participantStatus: 'pending' } as UpdateVolunteerHistoryInput;
       
       const updatedHistory = await updateVolunteerHistory('1', partialUpdate);
 
@@ -112,7 +116,7 @@ describe('volunteerHistory DAL', () => {
     });
 
     it('should preserve unchanged fields', async () => {
-      const partialUpdate = { participantStatus: 'cancelled' };
+      const partialUpdate = { participantStatus: 'cancelled' } as UpdateVolunteerHistoryInput;
       
       const updatedHistory = await updateVolunteerHistory('1', partialUpdate);
 
