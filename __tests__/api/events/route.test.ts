@@ -1,4 +1,4 @@
-import { GET, POST, PUT } from '@/app/api/events/route';
+import { GET, POST, PUT, DELETE } from '@/app/api/events/route';
 import * as eventActions from '@/app/lib/services/eventActions';
 import { NextRequest } from 'next/server';
 
@@ -7,6 +7,7 @@ jest.mock('@/app/lib/services/eventActions');
 const mockGetEvents = eventActions.getEvents as jest.MockedFunction<any>;
 const mockCreateNewEvent = eventActions.createNewEvent as jest.MockedFunction<any>;
 const mockUpdateEventDetails = eventActions.updateEventDetails as jest.MockedFunction<any>;
+const mockDeleteEventById = eventActions.deleteEventById as jest.MockedFunction<any>;
 
 describe('/api/events', () => {
   beforeEach(() => {
@@ -389,6 +390,103 @@ describe('/api/events', () => {
       });
 
       const response = await PUT(request);
+
+      expect(response.headers.get('content-type')).toContain('application/json');
+    });
+  });
+
+  describe('DELETE /api/events', () => {
+    it('should delete event successfully with 200 status', async () => {
+      mockDeleteEventById.mockResolvedValue({
+        success: true,
+        message: 'Event deleted successfully'
+      });
+
+      const request = new NextRequest('http://localhost:3000/api/events', {
+        method: 'DELETE',
+        body: JSON.stringify({ id: '1' })
+      });
+
+      const response = await DELETE(request);
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.message).toBe('Event deleted successfully');
+      expect(mockDeleteEventById).toHaveBeenCalledWith('1');
+    });
+
+    it('should return 400 when event ID is missing', async () => {
+      const request = new NextRequest('http://localhost:3000/api/events', {
+        method: 'DELETE',
+        body: JSON.stringify({})
+      });
+
+      const response = await DELETE(request);
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Event ID is required');
+      expect(mockDeleteEventById).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when event is not found', async () => {
+      mockDeleteEventById.mockResolvedValue({
+        success: false,
+        error: 'Event not found'
+      });
+
+      const request = new NextRequest('http://localhost:3000/api/events', {
+        method: 'DELETE',
+        body: JSON.stringify({ id: '999' })
+      });
+
+      const response = await DELETE(request);
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Event not found');
+    });
+
+    it('should handle JSON parse errors', async () => {
+      const request = new NextRequest('http://localhost:3000/api/events', {
+        method: 'DELETE',
+        body: 'invalid json'
+      });
+
+      const response = await DELETE(request);
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Failed to delete event');
+    });
+
+    it('should handle service errors gracefully', async () => {
+      mockDeleteEventById.mockRejectedValue(new Error('Database connection failed'));
+
+      const request = new NextRequest('http://localhost:3000/api/events', {
+        method: 'DELETE',
+        body: JSON.stringify({ id: '1' })
+      });
+
+      const response = await DELETE(request);
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Failed to delete event');
+    });
+
+    it('should return correct content type', async () => {
+      mockDeleteEventById.mockResolvedValue({
+        success: true,
+        message: 'Event deleted successfully'
+      });
+
+      const request = new NextRequest('http://localhost:3000/api/events', {
+        method: 'DELETE',
+        body: JSON.stringify({ id: '1' })
+      });
+
+      const response = await DELETE(request);
 
       expect(response.headers.get('content-type')).toContain('application/json');
     });

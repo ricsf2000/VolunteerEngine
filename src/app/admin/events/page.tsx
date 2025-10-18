@@ -61,6 +61,7 @@ export default function AdminEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
 
   // Fetch events from backend API
   const fetchEvents = async () => {
@@ -74,6 +75,36 @@ export default function AdminEvents() {
       console.error("API call failed:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete event function
+  const handleDeleteEvent = async (eventId: number, eventName: string) => {
+    if (!confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingEventId(eventId);
+    try {
+      const response = await fetch('/api/events', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: eventId.toString() }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to delete event: ${error.error || 'Unknown error'}`);
+        return;
+      }
+
+      // Refresh the event list after successful deletion
+      await fetchEvents();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Failed to connect to server');
+    } finally {
+      setDeletingEventId(null);
     }
   };
 
@@ -151,6 +182,13 @@ export default function AdminEvents() {
                   className="rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white shadow transition-colors hover:bg-blue-700"
                 >
                   Edit Event
+                </button>
+                <button
+                  onClick={() => handleDeleteEvent(e.id, e.eventName)}
+                  disabled={deletingEventId === e.id}
+                  className="rounded-lg bg-rose-600 px-3 py-1 text-sm font-medium text-white shadow transition-colors hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deletingEventId === e.id ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
