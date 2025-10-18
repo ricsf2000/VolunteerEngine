@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 
 import {
   Calendar,
