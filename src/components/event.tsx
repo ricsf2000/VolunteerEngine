@@ -114,7 +114,15 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 			const eventDateTime = new Date(`${eventDate}T${eventTime}`);
 
 			// Build the payload matching backend expectations
-			const payload = {
+			const payload: {
+				eventName: string;
+				description: string;
+				location: string;
+				requiredSkills: string[];
+				urgency: string;
+				eventDate: string;
+				id?: string;
+			} = {
 				eventName,
 				description,
 				location,
@@ -123,9 +131,14 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 				eventDate: eventDateTime.toISOString(),
 			};
 
-			// Call backend API
+			// If editing, include the event ID in the payload
+			if (editingEvent) {
+				payload.id = editingEvent.id.toString();
+			}
+
+			// Call backend API - use PUT for updates, POST for new events
 			const response = await fetch('/api/events', {
-				method: 'POST',
+				method: editingEvent ? 'PUT' : 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload),
 			});
