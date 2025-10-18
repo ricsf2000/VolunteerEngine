@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
-import { fetchGlobalMatches, postAssignment, checkAssignmentByNames, type GlobalMatch } from '@/app/lib/api/matches';
+import { volunteerMatchingApi } from '@/app/lib/services/volunteer-matching-api';
+
 export default function VolunteerMatchingPage() 
 {
   const [currentVolunteer, setCurrentVolunteer] = useState<any>(null);
@@ -27,15 +28,14 @@ export default function VolunteerMatchingPage()
     setIsAutoFilling(true);
     try 
     {
-      const list = await fetchGlobalMatches(1);
-      if (list.length > 0) {
-        const top = list[0];
-        // top.volunteer and top.event align with backend types
-        setCurrentVolunteer(top.volunteer);
-        setCurrentEvent(top.event as any);
-        setVolunteerName(top.volunteer.fullName);
-        setEventName(top.event.eventName);
-      }
+      const volunteer = await volunteerMatchingApi.getRandomVolunteer();
+      const event = await volunteerMatchingApi.getBestMatchForVolunteer();
+      
+      setCurrentVolunteer(volunteer);
+      setCurrentEvent(event);
+
+      setVolunteerName('');
+      setEventName('');
     } 
     catch (error) 
     {
@@ -47,21 +47,24 @@ export default function VolunteerMatchingPage()
     }
   };
 
-  const handleManualMatch = async () => {
-    if (!volunteerName.trim() || !eventName.trim()) return;
-    try {
-      const result = await checkAssignmentByNames(volunteerName.trim(), eventName.trim());
-      if (result.exists) {
-        console.warn('Match already exists in history');
-        setShowSuccessMessage(false);
-        return;
-      }
-      if (result.volunteer && result.event) {
-        setCurrentVolunteer(result.volunteer);
-        setCurrentEvent(result.event as any);
-      }
-    } catch (e) {
-      console.error('manual match check failed:', e);
+  const handleManualMatch = () => {
+    if (volunteerName.trim() && eventName.trim()) {
+      // Create mock volunteer and event objects for manual entry
+      setCurrentVolunteer({
+        id: 'manual',
+        fullName: volunteerName.trim(),
+        skills: ['Manual Entry'],
+        city: 'N/A',
+        state: 'N/A',
+        availability: ['Manual Entry']
+      });
+      setCurrentEvent({
+        id: 'manual',
+        eventName: eventName.trim(),
+        requiredSkills: ['Manual Entry'],
+        eventDate: 'TBD',
+        urgency: 'Manual Entry'
+      });
     }
   };
 
@@ -72,13 +75,7 @@ export default function VolunteerMatchingPage()
       setIsSubmitting(true);
       try 
       {
-        // Only proceed if we have real IDs from backend
-        const volunteerId = (currentVolunteer as GlobalMatch['volunteer']).userId;
-        const eventId = (currentEvent as GlobalMatch['event']).id;
-        if (!volunteerId || !eventId || volunteerId === 'manual') {
-          throw new Error('Cannot confirm manual match without valid IDs');
-        }
-        await postAssignment(eventId, volunteerId);
+        await volunteerMatchingApi.submitMatch(currentVolunteer.id, currentEvent.id);
         
         setCurrentVolunteer(null);
         setCurrentEvent(null);
@@ -150,20 +147,16 @@ export default function VolunteerMatchingPage()
           </div>
         </div>
 
-        {/* confirm button under inputs when no summary displayed */}
-        {!(currentVolunteer && currentEvent) && (
-          <div className="flex justify-center">
-            <button
-              onClick={handleManualMatch}
-              disabled={!volunteerName.trim() || !eventName.trim() || isSubmitting}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-            >
-              {isSubmitting ? 'Confirming...' : 'Confirm Match'}
-            </button>
-          </div>
-        )}
-
-        {/* confirm button appears below summary when a match is selected */}
+        {/* create match button */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleManualMatch}
+            disabled={!volunteerName.trim() || !eventName.trim() || isSubmitting}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+          >
+            Create Match
+          </button>
+        </div>
 
         {/* match summary section */}
         {currentVolunteer && currentEvent && (
@@ -171,7 +164,15 @@ export default function VolunteerMatchingPage()
             <div className="flex justify-between items-start mb-4">
               <h3 className="font-semibold text-green-400 text-xl">Match Summary</h3>
               
-              {/* confirm button moved to footer */}
+              {/* confirm button in top right */}
+              <button
+                onClick={handleSubmitMatch}
+                disabled={isSubmitting}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold flex items-center gap-2 text-sm"
+              >
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? 'Confirming...' : 'Confirm Match'}
+              </button>
             </div>
             
             <div className="grid md:grid-cols-2 gap-6">
@@ -197,18 +198,6 @@ export default function VolunteerMatchingPage()
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {currentVolunteer && currentEvent && (
-          <div className="flex justify-center mt-4">
-            <button
-              onClick={handleSubmitMatch}
-              disabled={isSubmitting}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-            >
-              {isSubmitting ? 'Confirming...' : 'Confirm Match'}
-            </button>
           </div>
         )}
 
