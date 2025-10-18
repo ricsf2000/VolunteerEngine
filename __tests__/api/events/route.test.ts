@@ -258,8 +258,7 @@ describe('/api/events', () => {
     });
 
     it('should return 400 when event ID is missing', async () => {
-      const invalidData = { ...validUpdateData };
-      delete invalidData.id;
+      const { id, ...invalidData } = validUpdateData;
 
       const request = new NextRequest('http://localhost:3000/api/events', {
         method: 'PUT',
@@ -376,7 +375,6 @@ describe('/api/events', () => {
 
     it('should return correct content type', async () => {
       const mockUpdatedEvent = {
-        id: '1',
         ...validUpdateData,
         createdAt: '2025-10-17T22:53:24.754Z',
         updatedAt: '2025-10-17T23:15:30.123Z'
