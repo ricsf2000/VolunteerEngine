@@ -1,5 +1,5 @@
 export interface VolunteerHistory {
-  id: string;
+  id: string; // Primary key
   userId: string; // Foreign key to UserCredentials
   eventId: string; // Foreign key to EventDetails
   participantStatus: 'pending' | 'confirmed' | 'cancelled' | 'no-show';
@@ -14,7 +14,7 @@ export type UpdateVolunteerHistoryInput = Partial<Omit<VolunteerHistory, 'id' | 
 // Hardcoded history - replace with Prisma queries later
 const volunteerHistory: VolunteerHistory[] = [
   {
-    id: '1',
+    id: '1', 
     userId: '2', // volunteer@test.com
     eventId: '1', // Community Food Drive
     participantStatus: 'confirmed',
@@ -26,6 +26,11 @@ const volunteerHistory: VolunteerHistory[] = [
 
 export async function getHistoryByUserId(userId: string): Promise<VolunteerHistory[]> {
   return volunteerHistory.filter(h => h.userId === userId);
+}
+
+export async function getHistoryById(id: string): Promise<VolunteerHistory | null> {
+  const entry = volunteerHistory.find(h => h.id === id);
+  return entry || null;
 }
 
 export async function createVolunteerHistory(input: CreateVolunteerHistoryInput): Promise<VolunteerHistory> {
@@ -43,17 +48,21 @@ export async function createVolunteerHistory(input: CreateVolunteerHistoryInput)
 }
 
 export async function updateVolunteerHistory(id: string, input: UpdateVolunteerHistoryInput): Promise<VolunteerHistory | null> {
-  
+
   const historyIndex = volunteerHistory.findIndex(h => h.id === id);
   if (historyIndex === -1) return null;
-  
+
   const history = volunteerHistory[historyIndex];
-  
+
   volunteerHistory[historyIndex] = {
     ...history,
     ...input,
     updatedAt: new Date(),
   };
-  
+
   return volunteerHistory[historyIndex];
+}
+
+export async function getAllHistory(): Promise<VolunteerHistory[]> {
+  return [...volunteerHistory];
 }

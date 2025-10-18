@@ -1,5 +1,6 @@
 import {
   getHistoryByUserId,
+  getHistoryById,
   createVolunteerHistory,
   updateVolunteerHistory,
   VolunteerHistory,
@@ -36,6 +37,41 @@ describe('volunteerHistory DAL', () => {
       history.forEach(record => {
         expect(record.userId).toBe('2');
       });
+    });
+  });
+
+  describe('getHistoryById', () => {
+    it('should return history entry for existing ID', async () => {
+      const entry = await getHistoryById('1');
+
+      expect(entry).toBeTruthy();
+      expect(entry?.id).toBe('1');
+      expect(entry?.userId).toBe('2');
+      expect(entry?.eventId).toBe('1');
+    });
+
+    it('should return null for non-existent ID', async () => {
+      const entry = await getHistoryById('999');
+
+      expect(entry).toBeNull();
+    });
+
+    it('should return null for empty ID', async () => {
+      const entry = await getHistoryById('');
+
+      expect(entry).toBeNull();
+    });
+
+    it('should return correct history entry structure', async () => {
+      const entry = await getHistoryById('1');
+
+      expect(entry).toHaveProperty('id');
+      expect(entry).toHaveProperty('userId');
+      expect(entry).toHaveProperty('eventId');
+      expect(entry).toHaveProperty('participantStatus');
+      expect(entry).toHaveProperty('registrationDate');
+      expect(entry).toHaveProperty('createdAt');
+      expect(entry).toHaveProperty('updatedAt');
     });
   });
 

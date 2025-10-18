@@ -1,7 +1,8 @@
 // src/app/volunteer/events/page.tsx
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 import {
   Calendar,
   MapPin,
@@ -22,7 +23,8 @@ type EventItem = {
   urgency: "Low" | "Medium" | "High"; // select
   eventDate: string;           // ISO "YYYY-MM-DD"
   eventTime?: string;          // "HH:mm" (optional)
-  status: "Pending" | "Confirmed";
+  status: "pending" | "confirmed" | "cancelled";
+  historyId: string;           // volunteer history record ID
 };
 
 // Clear urgency visuals: chip color + icon color
@@ -35,52 +37,94 @@ const urgencyUI: Record<EventItem["urgency"], { chip: string; icon: string }> = 
 const WORD_LIMIT = 40;
 
 export default function VolunteerEvents() {
-  const [events, setEvents] = useState<EventItem[]>([
-    {
-      id: "e1",
-      eventName: "Community Food Drive",
-      description: "Help organize and distribute food items to local families in need.",
-      location: "Central Park",
-      requiredSkills: ["Logistics", "Communication"],
-      urgency: "Medium",
-      eventDate: "2025-10-01",
-      eventTime: "09:30",
-      status: "Pending",
-    },
-    {
-      id: "e2",
-      eventName: "Clothing Drive – Sorting",
-      // Long on purpose to trigger 'Read more'
-      description:
-        "Sort and prepare donated clothing for distribution. You’ll work with a small team to separate items by size and type, check quality, fold and label donations, and help assemble bundles for families. Comfortable shoes recommended. This event is great for first-time volunteers and anyone who enjoys fast but organized teamwork. Brief orientation included at the start, and refreshments are provided throughout the shift. If you have labeling or inventory experience, please note it in your profile so we can place you at the intake station.",
-      location: "Community Center",
-      requiredSkills: ["Organization", "Teamwork"],
-      urgency: "Low",
-      eventDate: "2025-10-05",
-      eventTime: "13:00",
-      status: "Pending",
-    },
-    {
-      id: "e3",
-      eventName: "Distribution – Saturday",
-      description: "Assist with setup and distribution at the weekend event.",
-      location: "Lot B",
-      requiredSkills: ["Lifting", "Customer Service"],
-      urgency: "High",
-      eventDate: "2025-10-12",
-      eventTime: "08:00",
-      status: "Confirmed",
-    },
-  ]);
-
-  // Track which cards are expanded: id -> boolean
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const confirmEvent = (id: string) =>
-    setEvents(prev => prev.map(e => (e.id === id ? { ...e, status: "Confirmed" } : e)));
+  // Fetch volunteer's assigned events from backend
+  useEffect(() => {
+    const fetchVolunteerEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const declineEvent = (id: string) =>
-    setEvents(prev => prev.filter(e => e.id !== id)); // remove card (like notifications delete)
+        const response = await fetch(`/api/volunteerHistory`, {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch volunteer history');
+        }
+
+        const data = await response.json();
+
+        // Transform backend data to match frontend format
+        const transformedEvents: EventItem[] = data.map((entry: any) => ({
+          id: entry.eventId,
+          historyId: entry.id,
+          eventName: entry.eventName || "Unnamed Event",
+          description: entry.eventDescription || "",
+          location: entry.eventLocation || "",
+          requiredSkills: entry.eventSkills || [],
+          urgency: (entry.eventUrgency?.charAt(0).toUpperCase() + entry.eventUrgency?.slice(1)) || "Medium",
+          eventDate: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[0] : "",
+          eventTime: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[1].slice(0, 5) : undefined,
+          status: entry.participantStatus || "pending",
+        }));
+
+        // Filter out cancelled events
+        setEvents(transformedEvents.filter(e => e.status !== "cancelled"));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load events");
+        console.error("API call failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVolunteerEvents();
+  }, []);
+
+  const confirmEvent = async (historyId: string, eventId: string) => {
+    try {
+      const response = await fetch(`/api/volunteerHistory/${historyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'confirmed' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to confirm event');
+      }
+
+      // Update local state
+      setEvents(prev => prev.map(e => (e.id === eventId ? { ...e, status: "confirmed" } : e)));
+    } catch (err) {
+      console.error("Failed to confirm event:", err);
+      alert("Failed to confirm event. Please try again.");
+    }
+  };
+
+  const declineEvent = async (historyId: string, eventId: string) => {
+    try {
+      const response = await fetch(`/api/volunteerHistory/${historyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to decline event');
+      }
+
+      // Remove from local state
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+    } catch (err) {
+      console.error("Failed to decline event:", err);
+      alert("Failed to decline event. Please try again.");
+    }
+  };
 
   const toggleExpand = (id: string) =>
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -105,6 +149,35 @@ export default function VolunteerEvents() {
     if (words.length <= limit) return { isLong: false, short: text };
     return { isLong: true, short: words.slice(0, limit).join(" ") + "…" };
   };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <h1 className="text-3xl font-bold text-slate-100 mb-6">Events</h1>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto"></div>
+            <p className="mt-4 text-slate-300">Loading your events...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h1 className="text-3xl font-bold text-slate-100 mb-6">Events</h1>
+        <div className="rounded-lg border border-rose-700 bg-rose-900/30 p-4">
+          <div className="flex items-center gap-2 text-rose-300">
+            <span>⚠️</span>
+            <h3 className="font-semibold">Error loading data</h3>
+          </div>
+          <p className="mt-2 text-rose-200">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -133,14 +206,14 @@ export default function VolunteerEvents() {
                   </div>
 
                   <div className="ml-auto flex items-center gap-3">
-                    {e.status === "Confirmed" ? (
+                    {e.status === "confirmed" ? (
                       <span className="px-2 py-1 rounded-full text-xs border bg-blue-600/20 border-blue-400 text-blue-200">
                         Confirmed
                       </span>
                     ) : (
                       <>
                         <button
-                          onClick={() => confirmEvent(e.id)}
+                          onClick={() => confirmEvent(e.historyId, e.id)}
                           title="Confirm"
                           aria-label="Confirm"
                           className="text-blue-300 hover:text-blue-200 text-sm font-medium transition-colors inline-flex items-center gap-1"
@@ -149,7 +222,7 @@ export default function VolunteerEvents() {
                           Confirm
                         </button>
                         <button
-                          onClick={() => declineEvent(e.id)}
+                          onClick={() => declineEvent(e.historyId, e.id)}
                           title="Decline"
                           aria-label="Decline"
                           className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors inline-flex items-center gap-1"
@@ -249,7 +322,7 @@ function EmptyState() {
   return (
     <div className="text-center py-12 rounded-2xl border border-slate-800 bg-[#0b1a1e] shadow-lg">
       <h3 className="text-lg font-semibold text-slate-100 mb-2">No assigned events</h3>
-      <p className="text-slate-400">You’ll see events here when you’re assigned to one.</p>
+      <p className="text-slate-400">You'll see events here when you're assigned to one.</p>
     </div>
   );
 }

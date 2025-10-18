@@ -14,71 +14,31 @@ type VolunteerHistory = {
   participantStatus: "pending" | "confirmed";
 };
 
-// Dummy API call function
+// API call function to fetch all volunteer history records
 const getVolunteerHistories = async (): Promise<VolunteerHistory[]> => {
-  // Return mock data
-  return [
-    {
-      id: 1,
-      fullName: "Alex Johnson",
-      eventName: "Community Food Drive",
-      eventDescription: "Help organize and distribute food items to local families in need. Volunteers will assist with setup, distribution, and cleanup.",
-      location: "Central Park, Main Pavilion",
-      requiredSkills: ["Logistics", "Communication", "Customer Service"],
-      urgency: "Medium",
-      eventDate: "2025-03-25",
-      eventTime: "09:00",
-      participantStatus: "confirmed"
-    },
-    {
-      id: 2,
-      fullName: "Samira Khan",
-      eventName: "Beach Cleanup",
-      eventDescription: "Join us for a beach cleanup to help preserve our local coastline. Gloves and bags provided.",
-      location: "Santa Monica Beach, Pier Area",
-      requiredSkills: ["Crowd Control", "Physical Labor"],
-      urgency: "Low",
-      eventDate: "2025-03-28",
-      eventTime: "08:00",
-      participantStatus: "pending"
-    },
-    {
-      id: 3,
-      fullName: "Marcus Chen",
-      eventName: "Youth Mentorship Program",
-      eventDescription: "Weekly mentorship session with local youth. Help guide and inspire the next generation.",
-      location: "Community Center, Room 205",
-      requiredSkills: ["Mentoring", "Communication", "Patience"],
-      urgency: "High",
-      eventDate: "2025-04-02",
-      eventTime: "14:30",
-      participantStatus: "confirmed"
-    },
-    {
-      id: 4,
-      fullName: "Alex Johnson",
-      eventName: "Homeless Shelter Support",
-      eventDescription: "Evening shift at the homeless shelter serving meals and providing support.",
-      location: "Downtown Shelter, 123 Main St",
-      requiredSkills: ["Empathy", "Food Service", "Communication"],
-      urgency: "High",
-      eventDate: "2025-04-05",
-      eventTime: "18:00",
-      participantStatus: "pending"
-    },
-    {
-      id: 5,
-      fullName: "Taylor Smith",
-      eventName: "Animal Shelter Assistance",
-      eventDescription: "Help care for animals at the local shelter. Tasks include feeding, cleaning, and socializing with animals.",
-      location: "Paws & Claws Animal Shelter",
-      requiredSkills: ["Animal Care", "Cleaning", "Patience"],
-      urgency: "Medium",
-      eventDate: "2025-04-08",
-      eventTime: "10:30",
-      participantStatus: "confirmed"
-    }
-  ];
+  const response = await fetch('/api/volunteerHistory', {
+    cache: 'no-store', // Always fetch fresh data
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch volunteer history from API');
+  }
+
+  const data = await response.json();
+
+  // Transform backend data to match frontend format
+  return data.map((entry: any) => ({
+    id: parseInt(entry.id) || 0,
+    fullName: entry.userName || "Unknown User",
+    eventName: entry.eventName || "Unnamed Event",
+    eventDescription: entry.eventDescription || "",
+    location: entry.eventLocation || "",
+    requiredSkills: entry.eventSkills || [],
+    urgency: entry.eventUrgency ? (entry.eventUrgency.charAt(0).toUpperCase() + entry.eventUrgency.slice(1)) : "Medium",
+    eventDate: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[0] : "",
+    eventTime: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[1].slice(0, 5) : "00:00",
+    participantStatus: entry.status === "confirmed" ? "confirmed" : "pending"
+  }));
 };
 
 export default function AdminVolunteers() {
