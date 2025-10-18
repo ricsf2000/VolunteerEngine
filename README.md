@@ -37,6 +37,28 @@ Run the Development Server
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Testing Credentials
+
+For testing purposes, use these pre-configured accounts:
+
+### Admin Account
+- **Email:** `admin@test.com`
+- **Password:** `admin-pass`
+- **Access:** Full admin dashboard and user management features
+
+### Volunteer Account
+- **Email:** `volunteer@test.com`
+- **Password:** `vol-pass`
+- **Access:** Volunteer dashboard and profile management features
+
+## Testing
+
+Run the test suite:
+```bash
+npm test                # Run all tests
+npm run test:coverage   # Run tests with coverage report
+```
+
 ## Sources used for this project:
 
 For authentication/registration setup: https://nextjs.org/learn/dashboard-app/adding-authentication
