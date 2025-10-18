@@ -39,6 +39,7 @@ const WORD_LIMIT = 40;
 
 function VolunteerEventsContent() {
   const { data: session, status: sessionStatus } = useSession();
+  console.log('useSession ->', { sessionStatus, session });
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
