@@ -37,16 +37,11 @@ const userProfiles: UserProfile[] = [
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
-  
 ];
 
 export async function getUserProfileByUserId(userId: string): Promise<UserProfile | null> {
   const profile = userProfiles.find(p => p.userId === userId);
   return profile || null;
-}
-
-export async function getAllUserProfiles(): Promise<UserProfile[]> {
-  return [...userProfiles];
 }
 
 export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfile> {
