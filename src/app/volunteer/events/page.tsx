@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { SessionProvider, useSession } from "next-auth/react";
 
 import {
   Calendar,
@@ -37,9 +36,7 @@ const urgencyUI: Record<EventItem["urgency"], { chip: string; icon: string }> = 
 
 const WORD_LIMIT = 40;
 
-function VolunteerEventsContent() {
-  const { data: session, status: sessionStatus } = useSession();
-  console.log('useSession ->', { sessionStatus, session });
+export default function VolunteerEvents() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,19 +45,11 @@ function VolunteerEventsContent() {
   // Fetch volunteer's assigned events from backend
   useEffect(() => {
     const fetchVolunteerEvents = async () => {
-      if (sessionStatus === "loading") return;
-      if (!session?.user) {
-        setError("Not authenticated");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
-        const userId = (session.user as any).id;
-        const response = await fetch(`/api/volunteerHistory?userId=${userId}`, {
+        const response = await fetch(`/api/volunteerHistory`, {
           cache: 'no-store',
         });
 
@@ -81,7 +70,7 @@ function VolunteerEventsContent() {
           urgency: (entry.eventUrgency?.charAt(0).toUpperCase() + entry.eventUrgency?.slice(1)) || "Medium",
           eventDate: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[0] : "",
           eventTime: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[1].slice(0, 5) : undefined,
-          status: entry.status || "pending",
+          status: entry.participantStatus || "pending",
         }));
 
         // Filter out cancelled events
@@ -95,7 +84,7 @@ function VolunteerEventsContent() {
     };
 
     fetchVolunteerEvents();
-  }, [session, sessionStatus]);
+  }, []);
 
   const confirmEvent = async (historyId: string, eventId: string) => {
     try {
@@ -335,13 +324,5 @@ function EmptyState() {
       <h3 className="text-lg font-semibold text-slate-100 mb-2">No assigned events</h3>
       <p className="text-slate-400">You'll see events here when you're assigned to one.</p>
     </div>
-  );
-}
-
-export default function VolunteerEvents() {
-  return (
-    <SessionProvider>
-      <VolunteerEventsContent />
-    </SessionProvider>
   );
 }
