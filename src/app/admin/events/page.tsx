@@ -133,7 +133,7 @@ export default function AdminEvents() {
       </div>
       <div className="space-y-4">
         {events.map((e) => (
-          <div key={e.id} className="rounded-2xl border border-slate-800 bg-[#0b1a1e] p-5 shadow-lg">
+          <div key={e.id} className="card rounded-2xl p-5 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-lg font-semibold text-slate-100">{e.eventName}</h3>
