@@ -135,16 +135,18 @@ describe('Notifications DAL', () => {
         timestamp: 'Just now',
         isRead: false,
         eventInfo: {
-          name: 'Test Event',
-          date: 'March 25, 2024',
+          eventName: 'Test Event',
+          eventDate: new Date('2024-03-25T09:00:00'),
           location: 'Test Location',
+          requiredSkills: ['Food Service'],
+          urgency: 'high',
         },
       };
 
       const result = await createNotification(newNotification);
 
       expect(result.eventInfo).toBeDefined();
-      expect(result.eventInfo?.name).toBe('Test Event');
+      expect(result.eventInfo?.eventName).toBe('Test Event');
     });
   });
 });

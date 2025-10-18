@@ -3,7 +3,6 @@
 import { auth } from '@/auth';
 import {
   getNotificationsByUserId,
-  getNotificationsByUserRole,
   updateNotificationReadStatus,
   markAllNotificationsAsRead,
   deleteNotification,
@@ -95,8 +94,8 @@ export async function removeNotification(notificationId: number): Promise<{ succ
   }
 }
 
-export async function sendVolunteerNotification(
-  volunteerId: string,
+export async function sendNotification(
+  userId: string,
   userRole: 'volunteer' | 'admin',
   type: NotificationData['type'],
   title: string,
@@ -115,7 +114,7 @@ export async function sendVolunteerNotification(
     }
 
     const notification = await createNotification({
-      userId: volunteerId,
+      userId,
       userRole,
       type,
       title: title.trim(),

@@ -286,7 +286,16 @@ export default function Notifications({ userRole }: NotificationsProps)
                           {notification.title}
                         </h3>
                         <div className="flex items-center gap-2 ml-4">
-                          <span className="text-sm text-gray-400">{notification.timestamp}</span>
+                          <span className="text-sm text-gray-400">
+                            {new Date(notification.timestamp).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </span>
                           {!notification.isRead && (
                             <div className={`w-2 h-2 rounded-full ${
                               userRole === 'volunteer' ? 'bg-blue-400' : 'bg-green-400'
@@ -309,14 +318,13 @@ export default function Notifications({ userRole }: NotificationsProps)
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className={`w-4 h-4 ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`} />
                             <span className={`font-medium ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
-                              {notification.eventInfo.name}
+                              {notification.eventInfo.eventName}
                             </span>
                           </div>
                           <div className={`flex items-center gap-4 text-sm ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              <span>{notification.eventInfo.date}</span>
-                              {notification.eventInfo.time && <span>• {notification.eventInfo.time}</span>}
+                              <span>{new Date(notification.eventInfo.eventDate).toLocaleDateString()}</span>
                             </div>
                             {notification.eventInfo.location && (
                               <div className="flex items-center gap-1">

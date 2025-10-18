@@ -1,19 +1,12 @@
-// type definitions (moved from component)
-export interface EventInfo {
-  name: string;
-  date: string;
-  location?: string;
-  time?: string;
-  volunteers?: number;
-  maxVolunteers?: number;
-  openSpots?: number;
-}
+import { UserProfile } from './userProfile';
+import { EventDetails } from './eventDetails';
 
-export interface VolunteerInfo {
-  fullName: string; 
-  skills: string[];
-  availability: string[]; 
-}
+// type definitions (moved from component)
+// uses only fields from event details interface
+export type EventInfo = Pick<EventDetails, 'eventName' | 'eventDate' | 'location' | 'requiredSkills' | 'urgency'>;
+
+// reusing user profile fields for volunteer info in notifications
+export type VolunteerInfo = Pick<UserProfile, 'fullName' | 'skills' | 'availability'>;
 
 export interface MatchStats {
   volunteersMatched: number;
@@ -48,10 +41,11 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     isRead: false,
     eventInfo: {
-      name: 'Community Food Drive',
-      date: 'March 25, 2024',
+      eventName: 'Community Food Drive',
+      eventDate: new Date('2024-03-25T09:00:00'),
       location: 'Central Park',
-      time: '9:00 AM - 2:00 PM'
+      requiredSkills: ['Food Service'],
+      urgency: 'high'
     }
   },
   {
@@ -64,10 +58,11 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
     isRead: false,
     eventInfo: {
-      name: 'Beach Cleanup',
-      date: 'March 28, 2024',
+      eventName: 'Beach Cleanup',
+      eventDate: new Date('2024-03-28T08:00:00'),
       location: 'Santa Monica Beach',
-      time: '8:00 AM - 12:00 PM'
+      requiredSkills: ['Physical Labor'],
+      urgency: 'medium'
     }
   },
   {
@@ -80,10 +75,11 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     isRead: true,
     eventInfo: {
-      name: 'Senior Center Visit',
-      date: 'March 22, 2024',
+      eventName: 'Senior Center Visit',
+      eventDate: new Date('2024-03-22T10:00:00'),
       location: 'Sunrise Senior Center',
-      time: '10:00 AM - 1:00 PM'
+      requiredSkills: ['Healthcare', 'Community Outreach'],
+      urgency: 'low'
     }
   },
   {
@@ -123,10 +119,11 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
     isRead: false,
     eventInfo: {
-      name: 'Community Garden Project',
-      date: 'March 27, 2024',
-      volunteers: 25,
-      maxVolunteers: 25
+      eventName: 'Community Garden Project',
+      eventDate: new Date('2024-03-27T09:00:00'),
+      location: 'Downtown Community Garden',
+      requiredSkills: ['Gardening', 'Physical Labor'],
+      urgency: 'medium'
     }
   },
   {
@@ -154,9 +151,11 @@ const NOTIFICATIONS_DB: NotificationData[] = [
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     isRead: false,
     eventInfo: {
-      name: 'Homeless Shelter Support',
-      date: 'March 26, 2024',
-      openSpots: 2
+      eventName: 'Homeless Shelter Support',
+      eventDate: new Date('2024-03-26T07:00:00'),
+      location: 'City Homeless Shelter',
+      requiredSkills: ['Food Service', 'Community Outreach'],
+      urgency: 'high'
     }
   }
 ];

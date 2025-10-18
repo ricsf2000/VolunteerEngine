@@ -3,7 +3,7 @@ import {
   toggleNotificationReadStatus,
   markAllUserNotificationsAsRead,
   removeNotification,
-  sendVolunteerNotification,
+  sendNotification,
 } from '@/app/lib/services/notificationActions';
 
 // mock the auth
@@ -238,7 +238,7 @@ describe('Notification Actions (Service Layer)', () => {
     });
   });
 
-  describe('sendVolunteerNotification', () => {
+  describe('sendNotification', () => {
     it('should create notification with valid input', async () => {
       const mockCreatedNotification = {
         id: 10,
@@ -253,7 +253,7 @@ describe('Notification Actions (Service Layer)', () => {
 
       (notificationDAL.createNotification as jest.Mock).mockResolvedValue(mockCreatedNotification);
 
-      const result = await sendVolunteerNotification(
+      const result = await sendNotification(
         '2',
         'volunteer',
         'assignment',
@@ -277,7 +277,7 @@ describe('Notification Actions (Service Layer)', () => {
     it('should trim whitespace from title and message', async () => {
       (notificationDAL.createNotification as jest.Mock).mockResolvedValue({ id: 1 } as any);
 
-      await sendVolunteerNotification('2', 'volunteer', 'assignment', '  Spaced Title  ', '  Spaced Message  ');
+      await sendNotification('2', 'volunteer', 'assignment', '  Spaced Title  ', '  Spaced Message  ');
 
       expect(notificationDAL.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -288,17 +288,17 @@ describe('Notification Actions (Service Layer)', () => {
     });
 
     it('should return null for empty title', async () => {
-      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', '', 'Valid Message');
+      const result = await sendNotification('2', 'volunteer', 'assignment', '', 'Valid Message');
       expect(result).toBeNull();
     });
 
     it('should return null for whitespace-only title', async () => {
-      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', '   ', 'Valid Message');
+      const result = await sendNotification('2', 'volunteer', 'assignment', '   ', 'Valid Message');
       expect(result).toBeNull();
     });
 
     it('should return null for empty message', async () => {
-      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', 'Valid Title', '');
+      const result = await sendNotification('2', 'volunteer', 'assignment', 'Valid Title', '');
       expect(result).toBeNull();
     });
 
@@ -307,12 +307,14 @@ describe('Notification Actions (Service Layer)', () => {
       (notificationDAL.createNotification as jest.Mock).mockResolvedValue(mockCreated);
 
       const eventInfo = {
-        name: 'Test Event',
-        date: 'March 25, 2024',
+        eventName: 'Test Event',
+        eventDate: new Date('2024-03-25T09:00:00'),
         location: 'Test Location',
+        requiredSkills: ['Food Service'],
+        urgency: 'high' as const,
       };
 
-      await sendVolunteerNotification('2', 'volunteer', 'assignment', 'Title', 'Message', eventInfo);
+      await sendNotification('2', 'volunteer', 'assignment', 'Title', 'Message', eventInfo);
 
       expect(notificationDAL.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -326,7 +328,7 @@ describe('Notification Actions (Service Layer)', () => {
         new Error('Database error')
       );
 
-      const result = await sendVolunteerNotification('2', 'volunteer', 'assignment', 'Title', 'Message');
+      const result = await sendNotification('2', 'volunteer', 'assignment', 'Title', 'Message');
       expect(result).toBeNull();
     });
   });
