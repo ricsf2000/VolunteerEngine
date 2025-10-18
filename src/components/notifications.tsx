@@ -4,213 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Clock, MapPin, Users, Calendar, CheckCircle, AlertCircle, Info, X, Loader2 } from 'lucide-react';
 import { Loading } from './Loading';
 
-// event info interface
-interface eventInfo 
-{
-  name: string;
-  date: string;
-  location?: string;
-  time?: string;
-  volunteers?: number;
-  maxVolunteers?: number;
-  openSpots?: number;
-}
+// import types from dal
+import type { NotificationData } from '@/app/lib/dal/notifications';
 
-// volunteer info interface
-interface volunteerInfo 
-{
-  name: string;
-  skills: string[];
-  availability: string;
-}
-
-// stats for matching
-interface matchStats 
-{
-  volunteersMatched: number;
-  eventsCount: number;
-  efficiency: string;
-}
-
-// main notif interface
-interface notificationData 
-{
-  id: number;
-  type: 'assignment' | 'update' | 'reminder' | 'confirmation' | 'volunteer_application' | 'event_full' | 'matching_complete' | 'volunteer_dropout' | 'cancellation';
-  title: string;
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-  eventInfo?: eventInfo;
-  volunteerInfo?: volunteerInfo;
-  matchStats?: matchStats;
-}
-
-type userRole = 'volunteer' | 'admin';
-
-// dummy data for testing
-const dummyData: Record<userRole, notificationData[]> = 
-{
-  volunteer: 
-  [
-    {
-      id: 1,
-      type: 'assignment',
-      title: 'New Event Assignment',
-      message: 'You have been assigned to "Community Food Drive" on March 25th at Central Park.',
-      timestamp: '2 hours ago',
-      isRead: false,
-      eventInfo: 
-      {
-        name: 'Community Food Drive',
-        date: 'March 25, 2024',
-        location: 'Central Park',
-        time: '9:00 AM - 2:00 PM'
-      }
-    },
-    {
-      id: 2,
-      type: 'update',
-      title: 'Event Update',
-      message: 'The location for "Beach Cleanup" has been changed to Santa Monica Beach.',
-      timestamp: '5 hours ago',
-      isRead: false,
-      eventInfo: 
-      {
-        name: 'Beach Cleanup',
-        date: 'March 28, 2024',
-        location: 'Santa Monica Beach',
-        time: '8:00 AM - 12:00 PM'
-      }
-    },
-    {
-      id: 3,
-      type: 'reminder',
-      title: 'Event Reminder',
-      message: 'Don\'t forget about "Senior Center Visit" tomorrow at 10:00 AM.',
-      timestamp: '1 day ago',
-      isRead: true,
-      eventInfo: 
-      {
-        name: 'Senior Center Visit',
-        date: 'March 22, 2024',
-        location: 'Sunrise Senior Center',
-        time: '10:00 AM - 1:00 PM'
-      }
-    },
-    {
-      id: 4,
-      type: 'confirmation',
-      title: 'Registration Confirmed',
-      message: 'Your registration for "Tree Planting Initiative" has been confirmed.',
-      timestamp: '2 days ago',
-      isRead: true
-    }
-  ],
-  admin: 
-  [
-    {
-      id: 1,
-      type: 'volunteer_application',
-      title: 'New Volunteer Application',
-      message: 'Sarah Johnson has applied to volunteer for upcoming community events.',
-      timestamp: '1 hour ago',
-      isRead: false,
-      volunteerInfo: 
-      {
-        name: 'Sarah Johnson',
-        skills: ['Event Planning', 'Communication'],
-        availability: 'Weekends'
-      }
-    },
-    {
-      id: 2,
-      type: 'event_full',
-      title: 'Event Capacity Reached',
-      message: 'The "Community Garden Project" has reached maximum volunteer capacity (25/25).',
-      timestamp: '3 hours ago',
-      isRead: false,
-      eventInfo: 
-      {
-        name: 'Community Garden Project',
-        date: 'March 27, 2024',
-        volunteers: 25,
-        maxVolunteers: 25
-      }
-    },
-    {
-      id: 3,
-      type: 'matching_complete',
-      title: 'Volunteer Matching Complete',
-      message: 'Automated matching has been completed for 15 volunteers across 8 upcoming events.',
-      timestamp: '6 hours ago',
-      isRead: true,
-      matchStats: 
-      {
-        volunteersMatched: 15,
-        eventsCount: 8,
-        efficiency: '94%'
-      }
-    },
-    {
-      id: 4,
-      type: 'volunteer_dropout',
-      title: 'Volunteer Withdrawal',
-      message: 'Michael Chen has withdrawn from "Homeless Shelter Support" due to scheduling conflict.',
-      timestamp: '1 day ago',
-      isRead: false,
-      eventInfo: 
-      {
-        name: 'Homeless Shelter Support',
-        date: 'March 26, 2024',
-        openSpots: 2
-      }
-    }
-  ]
-};
-
-// fake api for testing
-const fakeApi = 
-{
-  // simulate loading time
-  delay: () => new Promise(resolve => setTimeout(resolve, 500)),
-  
-  async getNotifications(userRole: userRole): Promise<notificationData[]> 
-  {
-    await this.delay();
-    return dummyData[userRole];
-  },
-  
-  async markAsRead(id: number): Promise<{ success: boolean }> 
-  {
-    await this.delay();
-    return { success: true };
-  },
-  
-  async markAsUnread(id: number): Promise<{ success: boolean }> 
-  {
-    await this.delay();
-    return { success: true };
-  },
-  
-  async markAllAsRead(userRole: userRole): Promise<{ success: boolean }> 
-  {
-    await this.delay();
-    return { success: true };
-  },
-  
-  async deleteNotification(id: number): Promise<{ success: boolean }> 
-  {
-    await this.delay();
-    return { success: true };
-  }
-};
+type UserRole = 'volunteer' | 'admin';
 
 // helper func to get the right icon for notif type
 const getIcon = (type: string) => 
 {
-  switch (type) 
-  {
+  switch (type) {
     case 'assignment':
     case 'volunteer_application':
       return <Users className="w-5 h-5" />;
@@ -231,7 +33,7 @@ const getIcon = (type: string) =>
 };
 
 // helper func for notif card colors
-const getCardColors = (isRead: boolean, userRole: userRole) => 
+const getCardColors = (isRead: boolean, userRole: UserRole) => 
 {
   if (isRead) 
   {
@@ -243,7 +45,7 @@ const getCardColors = (isRead: boolean, userRole: userRole) =>
 };
 
 // helper func for icon colors
-const getIconColors = (isRead: boolean, userRole: userRole) => 
+const getIconColors = (isRead: boolean, userRole: UserRole) => 
 {
   if (isRead) 
   {
@@ -252,15 +54,15 @@ const getIconColors = (isRead: boolean, userRole: userRole) =>
   return userRole === 'volunteer' ? 'text-blue-400' : 'text-green-400';
 };
 
-interface notificationsProps 
+interface NotificationsProps 
 {
-  userRole: userRole;
+  userRole: UserRole;
 }
 
-export default function notifications({ userRole }: notificationsProps) 
+export default function Notifications({ userRole }: NotificationsProps) 
 {
   // state vars
-  const [notificationsList, setNotificationsList] = useState<notificationData[]>([]);
+  const [notificationsList, setNotificationsList] = useState<NotificationData[]>([]);
   const [currentFilter, setCurrentFilter] = useState<'all' | 'unread'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -271,87 +73,105 @@ export default function notifications({ userRole }: notificationsProps)
     loadNotifications();
   }, [userRole]);
 
-  // func to load all notifs
-  const loadNotifications = async () => 
+  // func to load all notifs from API
+  const loadNotifications = async () =>
   {
     setIsLoading(true);
-    try 
-    {
-      const data = await fakeApi.getNotifications(userRole);
-      setNotificationsList(data);
-    } 
-    catch (error) 
-    {
-      console.error('couldnt load notifications:', error);
-    } 
-    finally 
-    {
+    try {
+      const response = await fetch('/api/notifications');
+
+      if (!response.ok)
+      {
+        throw new Error('Failed to fetch notifications');
+      }
+
+      const data = await response.json();
+      setNotificationsList(data.notifications);
+    } catch (error) {
+      console.error('Could not load notifications:', error);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  // toggle read/unread status
-  const toggleReadStatus = async (id: number, currentStatus: boolean) => 
-  {
+  // toggle read/unread status via API
+  const toggleReadStatus = async (id: number, currentStatus: boolean) => {
     setLoadingAction(`toggle-${id}`);
-    try 
-    {
-      if (currentStatus) 
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle-read',
+          notificationId: id,
+          currentStatus
+        })
+      });
+      
+      if (!response.ok) 
       {
-        await fakeApi.markAsUnread(id);
-      } 
-      else 
-      {
-        await fakeApi.markAsRead(id);
+        throw new Error('Failed to toggle read status');
       }
-      setNotificationsList(prev => 
-        prev.map(notif => notif.id === id ? { ...notif, isRead: !currentStatus } : notif)
+      
+      const data = await response.json();
+      
+      // update local state
+      setNotificationsList(prev =>
+        prev.map(notif => notif.id === id ? data.notification : notif)
       );
-    } 
-    catch (error) 
-    {
-      console.error('failed to toggle read status:', error);
-    } 
-    finally 
-    {
+    } catch (error) {
+      console.error('Failed to toggle read status:', error);
+    } finally {
       setLoadingAction(null);
     }
   };
 
-  // mark all notifs as read
+  // mark all notifs as read via API
   const markAllAsRead = async () => 
   {
     setLoadingAction('mark-all');
-    try 
-    {
-      await fakeApi.markAllAsRead(userRole);
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark-all-read' })
+      });
+      
+      if (!response.ok) 
+      {
+        throw new Error('Failed to mark all as read');
+      }
+      
+      // update local state
       setNotificationsList(prev => prev.map(notif => ({ ...notif, isRead: true })));
-    } 
-    catch (error) 
-    {
-      console.error('failed to mark all as read:', error);
-    } 
-    finally 
-    {
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    } finally {
       setLoadingAction(null);
     }
   };
 
-  // delete a notif
+  // delete a notif via API
   const deleteNotification = async (id: number) => 
   {
     setLoadingAction(`delete-${id}`);
-    try 
-    {
-      await fakeApi.deleteNotification(id);
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: id })
+      });
+      
+      if (!response.ok) 
+      {
+        throw new Error('Failed to delete notification');
+      }
+      
+      // update local state
       setNotificationsList(prev => prev.filter(notif => notif.id !== id));
-    } 
-    catch (error) 
-    {
-      console.error('failed to delete notification:', error);
-    } 
-    finally 
-    {
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+    } finally {
       setLoadingAction(null);
     }
   };
@@ -360,6 +180,7 @@ export default function notifications({ userRole }: notificationsProps)
   const filteredNotifications = notificationsList.filter(notif => 
   {
     if (currentFilter === 'unread') return !notif.isRead;
+    
     return true;
   });
 
@@ -419,7 +240,6 @@ export default function notifications({ userRole }: notificationsProps)
           >
             Unread ({unreadCount})
           </button>
-
         </div>
         {unreadCount > 0 && (
           <button
@@ -466,7 +286,16 @@ export default function notifications({ userRole }: notificationsProps)
                           {notification.title}
                         </h3>
                         <div className="flex items-center gap-2 ml-4">
-                          <span className="text-sm text-gray-400">{notification.timestamp}</span>
+                          <span className="text-sm text-gray-400">
+                            {new Date(notification.timestamp).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </span>
                           {!notification.isRead && (
                             <div className={`w-2 h-2 rounded-full ${
                               userRole === 'volunteer' ? 'bg-blue-400' : 'bg-green-400'
@@ -489,14 +318,13 @@ export default function notifications({ userRole }: notificationsProps)
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className={`w-4 h-4 ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`} />
                             <span className={`font-medium ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
-                              {notification.eventInfo.name}
+                              {notification.eventInfo.eventName}
                             </span>
                           </div>
                           <div className={`flex items-center gap-4 text-sm ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              <span>{notification.eventInfo.date}</span>
-                              {notification.eventInfo.time && <span>• {notification.eventInfo.time}</span>}
+                              <span>{new Date(notification.eventInfo.eventDate).toLocaleDateString()}</span>
                             </div>
                             {notification.eventInfo.location && (
                               <div className="flex items-center gap-1">
@@ -511,17 +339,17 @@ export default function notifications({ userRole }: notificationsProps)
                       {/* volunteer details (admins only) */}
                       {notification.volunteerInfo && (
                         <div className={`rounded-lg p-3 mb-3 ${
-                          !notification.isRead 
+                          !notification.isRead
                             ? `bg-gray-700/50`
                             : 'bg-gray-700/30'
                         }`}>
                           <div className="text-sm">
                             <div className={`font-medium mb-1 ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
-                              {notification.volunteerInfo.name}
+                              {notification.volunteerInfo.fullName}
                             </div>
                             <div className={`${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Skills: {notification.volunteerInfo.skills.join(', ')} • 
-                              Available: {notification.volunteerInfo.availability}
+                              Skills: {notification.volunteerInfo.skills.join(', ')} •
+                              Available: {notification.volunteerInfo.availability.join(', ')}
                             </div>
                           </div>
                         </div>
