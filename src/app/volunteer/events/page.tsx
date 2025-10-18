@@ -193,7 +193,7 @@ export default function VolunteerEvents() {
             const isExpanded = !!expanded[e.id];
 
             return (
-              <div key={e.id} className="rounded-2xl border border-slate-800 bg-[#0b1a1e] p-5 shadow-lg">
+              <div key={e.id} className="card rounded-2xl p-5 shadow-lg">
                 {/* Top row: title + date/time + actions/status */}
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-lg font-semibold text-slate-100 flex-1">
