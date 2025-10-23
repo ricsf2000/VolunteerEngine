@@ -20,7 +20,7 @@
     "db:seed": "prisma db seed"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --project tsconfig.prisma.json prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
