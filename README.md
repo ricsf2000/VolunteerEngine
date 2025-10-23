@@ -22,7 +22,7 @@ Use the online generator: https://generate-secret.vercel.app/32
 
 #### Configure Environment Variables
 
-Create a .env.local file in your project root and add your generated secret:
+Create a .env file in your project root and add your generated secret:
 
    `AUTH_SECRET=your-generated-secret-key-here`
 
