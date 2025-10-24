@@ -5,13 +5,14 @@ import { auth } from '@/auth';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { callbackUrl?: string };
+  searchParams?: Promise<{ callbackUrl?: string }>;
 }) {
   const session = await auth();
   let expectedRole: 'admin' | 'volunteer' | undefined = (session?.user as any)?.role;
 
   if (!expectedRole) {
-    const cb = searchParams?.callbackUrl ? decodeURIComponent(searchParams.callbackUrl) : '';
+    const params = await searchParams;
+    const cb = params?.callbackUrl ? decodeURIComponent(params.callbackUrl) : '';
     if (cb.includes('/admin')) expectedRole = 'admin';
     else if (cb.includes('/volunteer')) expectedRole = 'volunteer';
   }

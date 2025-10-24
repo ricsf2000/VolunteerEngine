@@ -1,13 +1,6 @@
 import bcrypt from 'bcrypt';
-
-export interface UserCredentials {
-  id: string;
-  email: string;
-  password: string; // encrypted
-  role: 'admin' | 'volunteer';
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { prisma } from '@/app/lib/db';
+import type { UserCredentials } from '@/generated/prisma';
 
 export interface CreateUserCredentialsInput {
   email: string;
@@ -15,30 +8,19 @@ export interface CreateUserCredentialsInput {
   role: 'admin' | 'volunteer';
 }
 
-// Hardcoded credentials - replace with Prisma queries later
-// Passwords: admin-pass for admin, vol-pass for volunteer
-const userCredentials: UserCredentials[] = [
-  {
-    id: '1',
-    email: 'admin@test.com',
-    password: '$2b$10$QjfQCOFDIU9.S9xbHxnueezPhtl07enfbAXpUsPEoM4oEa7BWTJAK', // bcrypt hash for 'admin-pass'
-    role: 'admin',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-  {
-    id: '2',
-    email: 'volunteer@test.com',
-    password: '$2b$10$4hw0fbVriOXAcBCQ25Jzjec66CtxjtWpGjkCzAjwGaCUXI.Dwmfja', // bcrypt hash for 'vol-pass'
-    role: 'volunteer',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-];
-
 export async function getUserCredentialsByEmailAndRole(email: string, role: string): Promise<UserCredentials | null> {
-  const credentials = userCredentials.find(c => c.email === email && c.role === role);
-  return credentials || null;
+  try {
+    const credentials = await prisma.userCredentials.findFirst({
+      where: {
+        email,
+        role,
+      },
+    });
+    return credentials;
+  } catch (error) {
+    console.error('Error fetching user credentials:', error);
+    return null;
+  }
 }
 
 export async function createUserCredentials(input: CreateUserCredentialsInput): Promise<UserCredentials> {
@@ -51,29 +33,38 @@ export async function createUserCredentials(input: CreateUserCredentialsInput): 
   // Hash password
   const hashedPassword = await bcrypt.hash(input.password, 10);
   
-  // Create new credentials
-  const newCredentials: UserCredentials = {
-    id: (userCredentials.length + 1).toString(),
-    email: input.email,
-    password: hashedPassword,
-    role: input.role,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  userCredentials.push(newCredentials);
-  
-  return newCredentials;
+  try {
+    const newCredentials = await prisma.userCredentials.create({
+      data: {
+        email: input.email,
+        password: hashedPassword,
+        role: input.role,
+      },
+    });
+    
+    return newCredentials;
+  } catch (error) {
+    console.error('Error creating user credentials:', error);
+    throw new Error('Failed to create user credentials');
+  }
 }
 
 
 export async function updateUserPassword(userId: string, newPassword: string): Promise<UserCredentials | null> {
-  const credentialsIndex = userCredentials.findIndex(c => c.id === userId);
-  if (credentialsIndex === -1) return null;
-  
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  userCredentials[credentialsIndex].password = hashedPassword;
-  userCredentials[credentialsIndex].updatedAt = new Date();
-  
-  return userCredentials[credentialsIndex];
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    const updatedCredentials = await prisma.userCredentials.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        updatedAt: new Date(),
+      },
+    });
+    
+    return updatedCredentials;
+  } catch (error) {
+    console.error('Error updating user password:', error);
+    return null;
+  }
 }

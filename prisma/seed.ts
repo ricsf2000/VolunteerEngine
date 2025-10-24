@@ -16,11 +16,56 @@ async function main() {
 
   // --- States ---
   const states = [
-    { code: "TX", name: "Texas" },
+    { code: "AL", name: "Alabama" },
+    { code: "AK", name: "Alaska" },
+    { code: "AZ", name: "Arizona" },
+    { code: "AR", name: "Arkansas" },
     { code: "CA", name: "California" },
-    { code: "NY", name: "New York" },
-    { code: "IL", name: "Illinois" },
+    { code: "CO", name: "Colorado" },
+    { code: "CT", name: "Connecticut" },
+    { code: "DE", name: "Delaware" },
     { code: "FL", name: "Florida" },
+    { code: "GA", name: "Georgia" },
+    { code: "HI", name: "Hawaii" },
+    { code: "ID", name: "Idaho" },
+    { code: "IL", name: "Illinois" },
+    { code: "IN", name: "Indiana" },
+    { code: "IA", name: "Iowa" },
+    { code: "KS", name: "Kansas" },
+    { code: "KY", name: "Kentucky" },
+    { code: "LA", name: "Louisiana" },
+    { code: "ME", name: "Maine" },
+    { code: "MD", name: "Maryland" },
+    { code: "MA", name: "Massachusetts" },
+    { code: "MI", name: "Michigan" },
+    { code: "MN", name: "Minnesota" },
+    { code: "MS", name: "Mississippi" },
+    { code: "MO", name: "Missouri" },
+    { code: "MT", name: "Montana" },
+    { code: "NE", name: "Nebraska" },
+    { code: "NV", name: "Nevada" },
+    { code: "NH", name: "New Hampshire" },
+    { code: "NJ", name: "New Jersey" },
+    { code: "NM", name: "New Mexico" },
+    { code: "NY", name: "New York" },
+    { code: "NC", name: "North Carolina" },
+    { code: "ND", name: "North Dakota" },
+    { code: "OH", name: "Ohio" },
+    { code: "OK", name: "Oklahoma" },
+    { code: "OR", name: "Oregon" },
+    { code: "PA", name: "Pennsylvania" },
+    { code: "RI", name: "Rhode Island" },
+    { code: "SC", name: "South Carolina" },
+    { code: "SD", name: "South Dakota" },
+    { code: "TN", name: "Tennessee" },
+    { code: "TX", name: "Texas" },
+    { code: "UT", name: "Utah" },
+    { code: "VT", name: "Vermont" },
+    { code: "VA", name: "Virginia" },
+    { code: "WA", name: "Washington" },
+    { code: "WV", name: "West Virginia" },
+    { code: "WI", name: "Wisconsin" },
+    { code: "WY", name: "Wyoming" },
   ];
   await prisma.state.createMany({ data: states, skipDuplicates: true });
 
@@ -29,23 +74,23 @@ async function main() {
 
   const admin = await prisma.userCredentials.create({
     data: {
-      email: "admin@volunteerhub.org",
-      password: hash("Admin123!"), // sample; replace in real env
+      email: "admin@test.com",
+      password: hash("admin-pass"),
       role: "admin",
     },
   });
 
   const vol1 = await prisma.userCredentials.create({
     data: {
-      email: "alice@example.com",
-      password: hash("Volunteer123!"),
+      email: "volunteer@test.com",
+      password: hash("vol-pass"),
       role: "volunteer",
     },
   });
 
   const vol2 = await prisma.userCredentials.create({
     data: {
-      email: "bob@example.com",
+      email: "alice@example.com",
       password: hash("Volunteer123!"),
       role: "volunteer",
     },
@@ -61,13 +106,13 @@ async function main() {
         city: "Houston",
         state: "TX",
         zipCode: "77002",
-        skills: JSON.stringify(["coordination", "scheduling"]),
+        skills: ["coordination", "scheduling"],
         preferences: "Prefers weekday morning shifts; remote-friendly.",
-        availability: JSON.stringify([
+        availability: [
           "2025-10-27",
           "2025-10-28",
           "2025-11-03",
-        ]),
+        ],
       },
       {
         userId: vol1.id,
@@ -76,14 +121,14 @@ async function main() {
         city: "Houston",
         state: "TX",
         zipCode: "77004",
-        skills: JSON.stringify(["logistics", "food-handling", "spanish"]),
+        skills: ["logistics", "food-handling", "spanish"],
         preferences:
           "Enjoys check-in desk or packing. Avoids heavy lifting (>30 lb).",
-        availability: JSON.stringify([
+        availability: [
           "2025-10-30",
           "2025-11-02",
           "2025-11-09",
-        ]),
+        ],
       },
       {
         userId: vol2.id,
@@ -93,13 +138,13 @@ async function main() {
         city: "Sugar Land",
         state: "TX",
         zipCode: "77479",
-        skills: JSON.stringify(["first-aid", "forklift", "warehouse"]),
+        skills: ["first-aid", "forklift", "warehouse"],
         preferences: "Evenings and weekends; can do loading bay.",
-        availability: JSON.stringify([
+        availability: [
           "2025-10-31",
           "2025-11-01",
           "2025-11-08",
-        ]),
+        ],
       },
     ],
     skipDuplicates: true,
@@ -116,7 +161,7 @@ async function main() {
       description:
         "Sort donations, assemble food boxes, and help with distribution.",
       location: "Houston Food Bank Warehouse",
-      requiredSkills: JSON.stringify(["logistics", "food-handling"]),
+      requiredSkills: ["logistics", "food-handling"],
       urgency: "medium",
       eventDate: next(5),
     },
@@ -128,7 +173,7 @@ async function main() {
       description:
         "Set up cots and supplies at temporary shelter. Some lifting required.",
       location: "Downtown Community Center",
-      requiredSkills: JSON.stringify(["warehouse", "coordination"]),
+      requiredSkills: ["warehouse", "coordination"],
       urgency: "high",
       eventDate: next(2),
     },
@@ -140,7 +185,7 @@ async function main() {
       description:
         "Trash pickup, light landscaping, and recycling sorting in the park.",
       location: "Buffalo Bayou Park",
-      requiredSkills: JSON.stringify(["outdoors", "coordination"]),
+      requiredSkills: ["outdoors", "coordination"],
       urgency: "low",
       eventDate: next(9),
     },

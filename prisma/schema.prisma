@@ -11,6 +11,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  admin
+  volunteer
+}
+
+enum EventUrgency {
+  low
+  medium
+  high
+  urgent
+}
+
+enum ParticipantStatus {
+  pending
+  confirmed
+  cancelled
+  no_show
+}
+
 
 // ==========================================
 // REQUIRED TABLE: UserCredentials
@@ -18,9 +41,9 @@ datasource db {
 
 model UserCredentials {
   id               String            @id @default(uuid())
-  email            String            @unique // Added unique for best practice
-  password         String            // Encrypted - handled in application
-  role             String            // 'admin' | 'volunteer'
+  email            String            @unique
+  password         String            
+  role             UserRole
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   
@@ -41,13 +64,13 @@ model UserProfile {
   userId           String            @unique
   fullName         String
   address1         String
-  address2         String?           // Optional
+  address2         String?           
   city             String
   state            String
   zipCode          String
-  skills           Json              // Array of skill names stored as JSON
+  skills           Json              
   preferences      String            @db.Text
-  availability     Json              // Array of available dates stored as JSON
+  availability     Json              
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   
@@ -66,8 +89,8 @@ model EventDetails {
   eventName        String
   description      String            @db.Text
   location         String
-  requiredSkills   Json              // Array of skills stored as JSON
-  urgency          String            // 'low' | 'medium' | 'high' | 'urgent'
+  requiredSkills   Json              
+  urgency          EventUrgency
   eventDate        DateTime
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -87,7 +110,7 @@ model VolunteerHistory {
   id                String            @id @default(uuid())
   userId            String
   eventId           String
-  participantStatus String            // 'pending' | 'confirmed' | 'cancelled' | 'no-show'
+  participantStatus ParticipantStatus
   registrationDate  DateTime          @default(now())
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -119,19 +142,19 @@ model State {
 // ==========================================
 
 model NotificationData {
-  id               Int               @id @default(autoincrement()) // Interface specifies number
+  id               Int               @id @default(autoincrement())
   type             String            // 'assignment' | 'update' | 'reminder' | etc.
   title            String
   message          String            @db.Text
-  timestamp        String            // Stored as string per interface
+  timestamp        String            
   isRead           Boolean           @default(false)
   userId           String
   userRole         String            // 'volunteer' | 'admin'
   
   // Optional complex fields stored as JSON
-  eventInfo        Json?             // Optional EventInfo object
-  volunteerInfo    Json?             // Optional VolunteerInfo object
-  matchStats       Json?             // Optional MatchStats object
+  eventInfo        Json?             
+  volunteerInfo    Json?             
+  matchStats       Json?       
   
   // Relationships
   user             UserCredentials   @relation(fields: [userId], references: [id], onDelete: Cascade)
