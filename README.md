@@ -1,41 +1,95 @@
-## Set Up
+# VolunteerEngine
 
+A comprehensive volunteer management system built with Next.js, Prisma, and PostgreSQL.
 
-This project uses NextAuth.js (beta version) for authentication, which requires a secret key to encrypt cookies and secure user sessions.
+## Prerequisites
 
-### Prerequisites
+- **Node.js 18+**
+- **Docker Desktop** - [Download and Install Docker](https://docs.docker.com/get-docker/)
+  - **IMPORTANT:** Docker Desktop must be running before starting the database
+  - On Windows/Mac: Open Docker Desktop application
+  - On Linux: Ensure Docker service is running (`sudo systemctl start docker`)
 
-Next.js 14+
-Node.js installed
+## Setup Instructions for TAs
 
-### Setup Instructions
+### 1. Start Docker
+**CRITICAL FIRST STEP:** Make sure Docker is running!
+- **Windows/Mac:** Open Docker Desktop application and wait for it to start
+- **Linux:** `sudo systemctl start docker`
+- **Verify Docker is running:** `docker --version` should return version info
 
-Generate an Authentication Secret
+### 2. Clone and Install Dependencies
+```bash
+git clone <repository-url>
+cd VolunteerEngine
+npm install
+```
 
-macOS/Linux:
+### 3. Configure Environment Variables
+Create a `.env` file in the project root:
+```env
+# Database connection (pre-configured for our Docker setup)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/volunteerEngine_dev"
 
-  ` openssl rand -base64 32 `
+# Authentication secret (generate new one below)
+AUTH_SECRET="your-generated-secret-key-here"
+```
 
-Windows:
+**Generate AUTH_SECRET:**
+- **macOS/Linux:** `openssl rand -base64 32`
+- **Windows:** Use [generate-secret.vercel.app/32](https://generate-secret.vercel.app/32)
 
-Use the online generator: https://generate-secret.vercel.app/32
+### 4. Database Setup
+Run these commands in order:
+```bash
+# Start PostgreSQL database with Docker (requires Docker to be running!)
+npm run db:up
 
-#### Configure Environment Variables
+# Push database schema to create tables
+npm run db:push
 
-Create a .env file in your project root and add your generated secret:
+# Seed database with test data (users, events, etc.)
+npm run db:seed
+```
 
-   `AUTH_SECRET=your-generated-secret-key-here`
+### 5. Start the Application
+```bash
+npm run dev
+```
 
-Install Dependencies
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-   `npm install`
+## Troubleshooting
 
-Run the Development Server
+### "Cannot connect to the Docker daemon"
+- **Solution:** Start Docker Desktop application or `sudo systemctl start docker` on Linux
 
-   `npm run dev`
+### "Database connection failed"
+- **Check:** Is Docker running? `docker ps` should show the volunteer_engine container
+- **Fix:** Run `npm run db:up` to start the database
 
+### "Port 5432 already in use"
+- **Cause:** Another PostgreSQL instance is running
+- **Fix:** Stop other PostgreSQL instances or change port in `docker-compose.yml`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database Management
+
+```bash
+npm run db:up       # Start PostgreSQL with Docker
+npm run db:down     # Stop PostgreSQL container  
+npm run db:push     # Update database schema
+npm run db:seed     # Add test data
+npm run db:studio   # Open database viewer (http://localhost:5555)
+```
+
+## Docker Details
+
+Our `docker-compose.yml` creates:
+- **PostgreSQL 16** database server
+- **Database:** `volunteerEngine_dev`
+- **Username/Password:** `postgres/postgres`
+- **Port:** `5432`
+- **Data persistence:** Survives container restarts
 
 ## Testing Credentials
 
