@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  admin
+  volunteer
+}
+
+enum EventUrgency {
+  low
+  medium
+  high
+  urgent
+}
+
+enum ParticipantStatus {
+  pending
+  confirmed
+  cancelled
+  no_show
+}
+
+
+// ==========================================
+// REQUIRED TABLE: UserCredentials
+// ==========================================
+
+model UserCredentials {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String            
+  role             UserRole
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  // Relationships
+  profile          UserProfile?
+  volunteerHistory VolunteerHistory[]
+  notifications    NotificationData[]
+  
+  @@index([email])
+}
+
+// ==========================================
+// REQUIRED TABLE: UserProfile  
+// ==========================================
+
+model UserProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  fullName         String
+  address1         String
+  address2         String?           
+  city             String
+  state            String
+  zipCode          String
+  skills           Json              
+  preferences      String            @db.Text
+  availability     Json              
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  // Relationships
+  user             UserCredentials   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// ==========================================
+// REQUIRED TABLE: EventDetails
+// ==========================================
+
+model EventDetails {
+  id               String            @id @default(uuid())
+  eventName        String
+  description      String            @db.Text
+  location         String
+  requiredSkills   Json              
+  urgency          EventUrgency
+  eventDate        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  // Relationships
+  volunteerHistory VolunteerHistory[]
+  
+  @@index([eventDate])
+  @@index([urgency])
+}
+
+// ==========================================
+// REQUIRED TABLE: VolunteerHistory
+// ==========================================
+
+model VolunteerHistory {
+  id                String            @id @default(uuid())
+  userId            String
+  eventId           String
+  participantStatus ParticipantStatus
+  registrationDate  DateTime          @default(now())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Relationships
+  user              UserCredentials   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event             EventDetails      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // Prevent duplicate registrations
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([participantStatus])
+}
+
+// ==========================================
+// REQUIRED TABLE: States
+// ==========================================
+
+model State {
+  code             String            @id // State code (e.g., 'TX')
+  name             String            @unique // State name (e.g., 'Texas')
+  
+  @@index([name])
+}
+
+// ==========================================
+// REQUIRED: NotificationData (from interface)
+// ==========================================
+
+model NotificationData {
+  id               Int               @id @default(autoincrement())
+  type             String            // 'assignment' | 'update' | 'reminder' | etc.
+  title            String
+  message          String            @db.Text
+  timestamp        String            
+  isRead           Boolean           @default(false)
+  userId           String
+  userRole         String            // 'volunteer' | 'admin'
+  
+  // Optional complex fields stored as JSON
+  eventInfo        Json?             
+  volunteerInfo    Json?             
+  matchStats       Json?       
+  
+  // Relationships
+  user             UserCredentials   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([userId])
+}
+
+// ==========================================
+// Note: MatchStats is embedded in NotificationData as JSON
+// but we can track it separately if needed for reporting
+// ==========================================
+
+model MatchStats {
+  id                String            @id @default(uuid())
+  volunteersMatched Int
+  eventsCount       Int  
+  efficiency        String
+  createdAt         DateTime          @default(now())
+  
+  @@index([createdAt])
+}

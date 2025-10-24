@@ -44,3 +44,5 @@ next-env.d.ts
 *.tmp
 *.temp
 assignment1.txt
+
+/src/generated/prisma
