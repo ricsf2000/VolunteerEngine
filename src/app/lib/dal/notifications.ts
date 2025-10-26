@@ -1,3 +1,4 @@
+import { prisma } from '@/app/lib/db';
 import { UserProfile } from './userProfile';
 import { EventDetails } from './eventDetails';
 
@@ -21,206 +22,143 @@ export interface NotificationData {
   message: string;
   timestamp: string;
   isRead: boolean;
-  userId: string; 
+  userId: string;
   userRole: 'volunteer' | 'admin';
   eventInfo?: EventInfo;
   volunteerInfo?: VolunteerInfo;
   matchStats?: MatchStats;
 }
 
-// hardcoded data (simulating database)
-const NOTIFICATIONS_DB: NotificationData[] = [
-  // volunteer notifs
-  {
-    id: 1,
-    userId: '2', // volunteer@test.com
-    userRole: 'volunteer',
-    type: 'assignment',
-    title: 'New Event Assignment',
-    message: 'You have been assigned to "Community Food Drive" on March 25th at Central Park.',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-    isRead: false,
-    eventInfo: {
-      eventName: 'Community Food Drive',
-      eventDate: new Date('2024-03-25T09:00:00'),
-      location: 'Central Park',
-      requiredSkills: ['Food Service'],
-      urgency: 'high'
-    }
-  },
-  {
-    id: 2,
-    userId: '2', // volunteer@test.com
-    userRole: 'volunteer',
-    type: 'update',
-    title: 'Event Update',
-    message: 'The location for "Beach Cleanup" has been changed to Santa Monica Beach.',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-    isRead: false,
-    eventInfo: {
-      eventName: 'Beach Cleanup',
-      eventDate: new Date('2024-03-28T08:00:00'),
-      location: 'Santa Monica Beach',
-      requiredSkills: ['Physical Labor'],
-      urgency: 'medium'
-    }
-  },
-  {
-    id: 3,
-    userId: '2', // volunteer@test.com
-    userRole: 'volunteer',
-    type: 'reminder',
-    title: 'Event Reminder',
-    message: 'Don\'t forget about "Senior Center Visit" tomorrow at 10:00 AM.',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-    isRead: true,
-    eventInfo: {
-      eventName: 'Senior Center Visit',
-      eventDate: new Date('2024-03-22T10:00:00'),
-      location: 'Sunrise Senior Center',
-      requiredSkills: ['Healthcare', 'Community Outreach'],
-      urgency: 'low'
-    }
-  },
-  {
-    id: 4,
-    userId: '2', // volunteer@test.com
-    userRole: 'volunteer',
-    type: 'confirmation',
-    title: 'Registration Confirmed',
-    message: 'Your registration for "Tree Planting Initiative" has been confirmed.',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    isRead: true
-  },
-
-  // admin notifs
-  {
-    id: 5,
-    userId: '1', // admin@test.com
-    userRole: 'admin',
-    type: 'volunteer_application',
-    title: 'New Volunteer Application',
-    message: 'Sarah Johnson has applied to volunteer for upcoming community events.',
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
-    isRead: false,
-    volunteerInfo: {
-      fullName: 'Sarah Johnson',
-      skills: ['Event Planning', 'Communication'],
-      availability: ['2025-01-18', '2025-01-19'] // changed to array of dates
-    }
-  },
-  {
-    id: 6,
-    userId: '1', // admin@test.com
-    userRole: 'admin',
-    type: 'event_full',
-    title: 'Event Capacity Reached',
-    message: 'The "Community Garden Project" has reached maximum volunteer capacity (25/25).',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
-    isRead: false,
-    eventInfo: {
-      eventName: 'Community Garden Project',
-      eventDate: new Date('2024-03-27T09:00:00'),
-      location: 'Downtown Community Garden',
-      requiredSkills: ['Gardening', 'Physical Labor'],
-      urgency: 'medium'
-    }
-  },
-  {
-    id: 7,
-    userId: '1', // admin@test.com
-    userRole: 'admin',
-    type: 'matching_complete',
-    title: 'Volunteer Matching Complete',
-    message: 'Automated matching has been completed for 15 volunteers across 8 upcoming events.',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-    isRead: true,
-    matchStats: {
-      volunteersMatched: 15,
-      eventsCount: 8,
-      efficiency: '94%'
-    }
-  },
-  {
-    id: 8,
-    userId: '1', // admin@test.com
-    userRole: 'admin',
-    type: 'volunteer_dropout',
-    title: 'Volunteer Withdrawal',
-    message: 'Michael Chen has withdrawn from "Homeless Shelter Support" due to scheduling conflict.',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-    isRead: false,
-    eventInfo: {
-      eventName: 'Homeless Shelter Support',
-      eventDate: new Date('2024-03-26T07:00:00'),
-      location: 'City Homeless Shelter',
-      requiredSkills: ['Food Service', 'Community Outreach'],
-      urgency: 'high'
-    }
-  }
-];
-
 // dal functions - pure database operations (no business logic!)
 
 export async function getNotificationsByUserId(userId: string): Promise<NotificationData[]> {
-  // simulate database query delay
-  await new Promise(resolve => setTimeout(resolve, 300));
+  try {
+    const notifications = await prisma.notificationData.findMany({
+      where: {
+        userId,
+      },
+      orderBy: {
+        timestamp: 'desc',
+      },
+    });
 
-  // in real implementation: select * from notifications where user_id = $1
-  return NOTIFICATIONS_DB.filter(notif => notif.userId === userId);
+    // Convert Prisma result to NotificationData format
+    return notifications.map(n => ({
+      ...n,
+      type: n.type as NotificationData['type'],
+      userRole: n.userRole as NotificationData['userRole'],
+      eventInfo: n.eventInfo ? (n.eventInfo as unknown as EventInfo) : undefined,
+      volunteerInfo: n.volunteerInfo ? (n.volunteerInfo as unknown as VolunteerInfo) : undefined,
+      matchStats: n.matchStats ? (n.matchStats as unknown as MatchStats) : undefined,
+    }));
+  } catch (error) {
+    console.error('Error fetching notifications by user ID:', error);
+    return [];
+  }
 }
 
 export async function getNotificationsByUserRole(userRole: 'volunteer' | 'admin'): Promise<NotificationData[]> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // in real implementation: select * from notifications where user_role = $1
-  return NOTIFICATIONS_DB.filter(notif => notif.userRole === userRole);
+  try {
+    const notifications = await prisma.notificationData.findMany({
+      where: {
+        userRole,
+      },
+      orderBy: {
+        timestamp: 'desc',
+      },
+    });
+
+    return notifications.map(n => ({
+      ...n,
+      type: n.type as NotificationData['type'],
+      userRole: n.userRole as NotificationData['userRole'],
+      eventInfo: n.eventInfo ? (n.eventInfo as unknown as EventInfo) : undefined,
+      volunteerInfo: n.volunteerInfo ? (n.volunteerInfo as unknown as VolunteerInfo) : undefined,
+      matchStats: n.matchStats ? (n.matchStats as unknown as MatchStats) : undefined,
+    }));
+  } catch (error) {
+    console.error('Error fetching notifications by user role:', error);
+    return [];
+  }
 }
 
 export async function updateNotificationReadStatus(
-  notificationId: number, 
+  notificationId: number,
   isRead: boolean
 ): Promise<NotificationData | null> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  // in real implementation: update notifications set is_read = $1 where id = $2
-  const notification = NOTIFICATIONS_DB.find(n => n.id === notificationId);
-  if (notification) {
-    notification.isRead = isRead;
-    return notification;
+  try {
+    const notification = await prisma.notificationData.update({
+      where: { id: notificationId },
+      data: { isRead },
+    });
+
+    return {
+      ...notification,
+      type: notification.type as NotificationData['type'],
+      userRole: notification.userRole as NotificationData['userRole'],
+      eventInfo: notification.eventInfo ? (notification.eventInfo as unknown as EventInfo) : undefined,
+      volunteerInfo: notification.volunteerInfo ? (notification.volunteerInfo as unknown as VolunteerInfo) : undefined,
+      matchStats: notification.matchStats ? (notification.matchStats as unknown as MatchStats) : undefined,
+    };
+  } catch (error) {
+    console.error('Error updating notification read status:', error);
+    return null;
   }
-  return null;
 }
 
 export async function markAllNotificationsAsRead(userId: string): Promise<number> {
-  await new Promise(resolve => setTimeout(resolve, 300));
+  try {
+    const result = await prisma.notificationData.updateMany({
+      where: { userId },
+      data: { isRead: true },
+    });
 
-  // in real implementation: update notifications set is_read = true where user_id = $1
-  const userNotifications = NOTIFICATIONS_DB.filter(n => n.userId === userId);
-  userNotifications.forEach(n => n.isRead = true);
-  return userNotifications.length;
+    return result.count;
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    return 0;
+  }
 }
 
 export async function deleteNotification(notificationId: number): Promise<boolean> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  // in real implementation: delete from notifications where id = $1
-  const index = NOTIFICATIONS_DB.findIndex(n => n.id === notificationId);
-  if (index !== -1) {
-    NOTIFICATIONS_DB.splice(index, 1);
+  try {
+    await prisma.notificationData.delete({
+      where: { id: notificationId },
+    });
     return true;
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    return false;
   }
-  return false;
 }
 
 export async function createNotification(data: Omit<NotificationData, 'id'>): Promise<NotificationData> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  // in real implementation: insert into notifications (...) VALUES (...)
-  const newNotification: NotificationData = {
-    ...data,
-    id: Math.max(...NOTIFICATIONS_DB.map(n => n.id), 0) + 1
-  };
-  NOTIFICATIONS_DB.push(newNotification);
-  return newNotification;
+  try {
+    const newNotification = await prisma.notificationData.create({
+      data: {
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        timestamp: data.timestamp,
+        isRead: data.isRead,
+        userId: data.userId,
+        userRole: data.userRole,
+        eventInfo: data.eventInfo ? (data.eventInfo as any) : undefined,
+        volunteerInfo: data.volunteerInfo ? (data.volunteerInfo as any) : undefined,
+        matchStats: data.matchStats ? (data.matchStats as any) : undefined,
+      },
+    });
+
+    return {
+      ...newNotification,
+      type: newNotification.type as NotificationData['type'],
+      userRole: newNotification.userRole as NotificationData['userRole'],
+      eventInfo: newNotification.eventInfo ? (newNotification.eventInfo as unknown as EventInfo) : undefined,
+      volunteerInfo: newNotification.volunteerInfo ? (newNotification.volunteerInfo as unknown as VolunteerInfo) : undefined,
+      matchStats: newNotification.matchStats ? (newNotification.matchStats as unknown as MatchStats) : undefined,
+    };
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    throw new Error('Failed to create notification');
+  }
 }
