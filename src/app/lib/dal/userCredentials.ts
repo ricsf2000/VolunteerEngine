@@ -1,14 +1,14 @@
 import bcrypt from 'bcrypt';
 import { prisma } from '@/app/lib/db';
-import type { UserCredentials } from '@/generated/prisma';
+import type { UserCredentials, UserRole } from '@/generated/prisma';
 
 export interface CreateUserCredentialsInput {
   email: string;
   password: string; // plain text, will be encrypted
-  role: 'admin' | 'volunteer';
+  role: UserRole;
 }
 
-export async function getUserCredentialsByEmailAndRole(email: string, role: string): Promise<UserCredentials | null> {
+export async function getUserCredentialsByEmailAndRole(email: string, role: UserRole): Promise<UserCredentials | null> {
   try {
     const credentials = await prisma.userCredentials.findFirst({
       where: {
