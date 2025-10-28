@@ -49,6 +49,8 @@ module.exports = {
   },
   
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  globalSetup: '<rootDir>/jest.globalSetup.js',
+  globalTeardown: '<rootDir>/jest.globalTeardown.js',
   
   clearMocks: true,
   resetMocks: true,
