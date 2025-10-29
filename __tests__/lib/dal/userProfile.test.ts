@@ -1,6 +1,10 @@
 
+import bcrypt from 'bcrypt';
+import { prisma } from '@/app/lib/db';
+
 import {
   getUserProfileByUserId,
+  getAllUserProfiles,
   createUserProfile,
   updateUserProfile,
   isProfileComplete,
@@ -10,15 +14,79 @@ import {
   UpdateUserProfileInput
 } from '@/app/lib/dal/userProfile';
 
+const TEST_PASSWORD = 'Password123!';
+
+async function createTestCredentials(emailPrefix = 'user'): Promise<{ id: string; email: string }> {
+  const unique = `${emailPrefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const credentials = await prisma.userCredentials.create({
+    data: {
+      email: `${unique}@test.com`,
+      password: await bcrypt.hash(TEST_PASSWORD, 10),
+      role: 'volunteer',
+    },
+  });
+
+  return { id: credentials.id, email: credentials.email };
+}
+
+type ProfileFixture = {
+  userId: string;
+  cleanup: () => Promise<void>;
+  defaults: CreateUserProfileInput;
+};
+
+async function createProfileFixture(overrides: Partial<CreateUserProfileInput> = {}): Promise<ProfileFixture> {
+  const credentials = await createTestCredentials('profile');
+
+  const defaults: CreateUserProfileInput = {
+    userId: credentials.id,
+    fullName: 'Fixture Volunteer',
+    address1: '123 Main St',
+    address2: 'Apt 4B',
+    city: 'Houston',
+    state: 'TX',
+    zipCode: '77001',
+    skills: ['Event Planning', 'Food Service'],
+    preferences: 'Prefers weekend events and community-focused activities',
+    availability: ['2025-01-05'],
+  };
+
+  const data = { ...defaults, ...overrides };
+
+  const profile = await prisma.userProfile.create({
+    data: {
+      ...data,
+      address2: data.address2 ? data.address2 : null,
+    },
+  });
+
+  const cleanup = async () => {
+    await prisma.userProfile.delete({ where: { id: profile.id } }).catch(() => {});
+    await prisma.userCredentials.delete({ where: { id: credentials.id } }).catch(() => {});
+  };
+
+  return { userId: credentials.id, cleanup, defaults: data };
+}
+
 describe('userProfile DAL', () => {
 
   describe('getUserProfileByUserId', () => {
+    let fixture: ProfileFixture;
+
+    beforeAll(async () => {
+      fixture = await createProfileFixture();
+    });
+
+    afterAll(async () => {
+      await fixture.cleanup();
+    });
+
     it('should return existing profile for valid user ID', async () => {
-      const profile = await getUserProfileByUserId('2');
+      const profile = await getUserProfileByUserId(fixture.userId);
 
       expect(profile).toBeTruthy();
-      expect(profile?.userId).toBe('2');
-      expect(profile?.fullName).toBe('John Volunteer');
+      expect(profile?.userId).toBe(fixture.userId);
+      expect(profile?.fullName).toBe(fixture.defaults.fullName);
     });
 
     it('should return null for non-existent user ID', async () => {
@@ -34,9 +102,153 @@ describe('userProfile DAL', () => {
     });
   });
 
+  describe('getAllUserProfiles', () => {
+    let fixtures: ProfileFixture[] = [];
+
+    beforeAll(async () => {
+      fixtures = [
+        await createProfileFixture({
+          fullName: 'First Fixture',
+          address2: '',
+          availability: ['2025-01-06'],
+        }),
+        await createProfileFixture({
+          fullName: 'Second Fixture',
+          preferences: 'Different preferences',
+          availability: ['2025-01-07'],
+        }),
+      ];
+    });
+
+    afterAll(async () => {
+      await Promise.all(fixtures.map(f => f.cleanup()));
+    });
+
+    it('should return all profiles with normalized optional fields', async () => {
+      const profiles = await getAllUserProfiles();
+      const fetched = fixtures.map(f => profiles.find(p => p.userId === f.userId));
+
+      fetched.forEach(profile => expect(profile).toBeTruthy());
+      // address2 should normalize null to empty string
+      expect(fetched[0]?.address2).toBe('');
+      expect(Array.isArray(fetched[0]?.skills)).toBe(true);
+      expect(Array.isArray(fetched[0]?.availability)).toBe(true);
+    });
+
+    it('should order profiles by most recent creation first', async () => {
+      const profiles = await getAllUserProfiles();
+      const idxFirst = profiles.findIndex(p => p.userId === fixtures[0].userId);
+      const idxSecond = profiles.findIndex(p => p.userId === fixtures[1].userId);
+
+      expect(idxFirst).toBeGreaterThanOrEqual(0);
+      expect(idxSecond).toBeGreaterThanOrEqual(0);
+      expect(idxSecond).toBeLessThan(idxFirst);
+    });
+  });
+
+  describe('normalization and error handling', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should coerce non-array JSON fields to empty arrays', async () => {
+      const credentials = await createTestCredentials('normalize');
+      let profileId: string | undefined;
+
+      try {
+        await prisma.userProfile.create({
+          data: {
+            userId: credentials.id,
+            fullName: 'JSON Edge Case',
+            address1: '100 Edge St',
+            address2: null,
+            city: 'Edge City',
+            state: 'TX',
+            zipCode: '77002',
+            skills: 'not-an-array',
+            preferences: 'none',
+            availability: '2025-01-01',
+          },
+        });
+
+        const profile = await getUserProfileByUserId(credentials.id);
+        profileId = profile?.id;
+
+        expect(profile?.skills).toEqual([]);
+        expect(profile?.availability).toEqual([]);
+      } finally {
+        if (profileId) {
+          await prisma.userProfile.delete({ where: { id: profileId } }).catch(() => {});
+        }
+        await prisma.userCredentials.delete({ where: { id: credentials.id } }).catch(() => {});
+      }
+    });
+
+    it('should return null when getUserProfileByUserId encounters an error', async () => {
+      jest.spyOn(prisma.userProfile, 'findUnique').mockRejectedValue(new Error('database down'));
+
+      const result = await getUserProfileByUserId('any-user');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return empty array when getAllUserProfiles fails', async () => {
+      jest.spyOn(prisma.userProfile, 'findMany').mockRejectedValue(new Error('database down'));
+
+      const result = await getAllUserProfiles();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should throw friendly error when createUserProfile fails to persist', async () => {
+      const credentials = await createTestCredentials('create-error');
+      const spy = jest.spyOn(prisma.userProfile, 'create').mockRejectedValue(new Error('insert failed'));
+
+      await expect(createUserProfile({
+        userId: credentials.id,
+        fullName: 'Failure Case',
+        address1: '1 Failure Way',
+        address2: '',
+        city: 'Houston',
+        state: 'TX',
+        zipCode: '77001',
+        skills: ['Testing'],
+        preferences: 'none',
+        availability: ['2025-01-01'],
+      })).rejects.toThrow('Failed to create user profile');
+
+      spy.mockRestore();
+      await prisma.userCredentials.delete({ where: { id: credentials.id } }).catch(() => {});
+    });
+
+    it('should reuse existing profile when updateUserProfile receives no changes', async () => {
+      const fixture = await createProfileFixture();
+
+      try {
+        const original = await getUserProfileByUserId(fixture.userId);
+        const result = await updateUserProfile(fixture.userId, {});
+
+        expect(result?.id).toBe(original?.id);
+        expect(result?.fullName).toBe(original?.fullName);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    it('should surface update failures with friendly message', async () => {
+      const fixture = await createProfileFixture();
+      const spy = jest.spyOn(prisma.userProfile, 'update').mockRejectedValue(new Error('update failed'));
+
+      await expect(updateUserProfile(fixture.userId, { fullName: 'Will Fail' }))
+        .rejects.toThrow('Failed to update user profile');
+
+      spy.mockRestore();
+      await fixture.cleanup();
+    });
+  });
+
   describe('createUserProfile', () => {
-    const validInput: CreateUserProfileInput = {
-      userId: 'new-user-123',
+    const baseProfileInput: Omit<CreateUserProfileInput, 'userId'> = {
       fullName: 'Jane Doe',
       address1: '456 Oak St',
       address2: 'Suite 200',
@@ -49,53 +261,95 @@ describe('userProfile DAL', () => {
     };
 
     it('should create a new profile successfully', async () => {
-      const profile = await createUserProfile(validInput);
+      const credentials = await createTestCredentials('create-profile');
+      const input: CreateUserProfileInput = { ...baseProfileInput, userId: credentials.id };
 
-      expect(profile).toBeTruthy();
-      expect(profile.userId).toBe(validInput.userId);
-      expect(profile.fullName).toBe(validInput.fullName);
-      expect(profile.address1).toBe(validInput.address1);
-      expect(profile.address2).toBe(validInput.address2);
-      expect(profile.city).toBe(validInput.city);
-      expect(profile.state).toBe(validInput.state);
-      expect(profile.zipCode).toBe(validInput.zipCode);
-      expect(profile.skills).toEqual(validInput.skills);
-      expect(profile.preferences).toBe(validInput.preferences);
-      expect(profile.availability).toEqual(validInput.availability);
-      expect(profile.id).toBeTruthy();
-      expect(profile.createdAt).toBeInstanceOf(Date);
-      expect(profile.updatedAt).toBeInstanceOf(Date);
+      let profile;
+      try {
+        profile = await createUserProfile(input);
+
+        expect(profile).toBeTruthy();
+        expect(profile.userId).toBe(input.userId);
+        expect(profile.fullName).toBe(input.fullName);
+        expect(profile.address1).toBe(input.address1);
+        expect(profile.address2).toBe(input.address2);
+        expect(profile.city).toBe(input.city);
+        expect(profile.state).toBe(input.state);
+        expect(profile.zipCode).toBe(input.zipCode);
+        expect(profile.skills).toEqual(input.skills);
+        expect(profile.preferences).toBe(input.preferences);
+        expect(profile.availability).toEqual(input.availability);
+        expect(profile.id).toBeTruthy();
+        expect(profile.createdAt).toBeInstanceOf(Date);
+        expect(profile.updatedAt).toBeInstanceOf(Date);
+      } finally {
+        await prisma.userProfile.delete({ where: { id: profile?.id ?? '' } }).catch(() => {});
+        await prisma.userCredentials.delete({ where: { id: credentials.id } }).catch(() => {});
+      }
     });
 
     it('should throw error when profile already exists', async () => {
-      const existingUserInput: CreateUserProfileInput = {
-        userId: '2', // This user already has a profile
-        fullName: 'Test User',
-        address1: '123 Test St',
+      const fixture = await createProfileFixture({
         address2: '',
-        city: 'Test City',
-        state: 'TX',
-        zipCode: '12345',
-        skills: ['Test Skill'],
-        preferences: 'Test preferences',
-        availability: ['2024-12-15']
+        preferences: 'Existing preferences',
+      });
+
+      const existingUserInput: CreateUserProfileInput = {
+        ...fixture.defaults,
+        userId: fixture.userId,
       };
 
       await expect(createUserProfile(existingUserInput)).rejects.toThrow('Profile already exists for this user');
+
+      await fixture.cleanup();
     });
 
-    it('should assign incremental ID', async () => {
-      const input1 = { ...validInput, userId: 'user-1' };
-      const input2 = { ...validInput, userId: 'user-2' };
+    it('should generate unique IDs for new profiles', async () => {
+      const credentials1 = await createTestCredentials('unique-profile-1');
+      const credentials2 = await createTestCredentials('unique-profile-2');
 
-      const profile1 = await createUserProfile(input1);
-      const profile2 = await createUserProfile(input2);
+      let profile1;
+      let profile2;
 
-      expect(parseInt(profile2.id)).toBeGreaterThan(parseInt(profile1.id));
+      try {
+        profile1 = await createUserProfile({ ...baseProfileInput, userId: credentials1.id });
+        profile2 = await createUserProfile({ ...baseProfileInput, userId: credentials2.id });
+
+        expect(profile1.id).toBeTruthy();
+        expect(profile2.id).toBeTruthy();
+        expect(profile1.id).not.toBe(profile2.id);
+        expect(profile1.id).toHaveLength(36);
+        expect(profile2.id).toHaveLength(36);
+      } finally {
+        if (profile1) {
+          await prisma.userProfile.delete({ where: { id: profile1.id } }).catch(() => {});
+        }
+        if (profile2) {
+          await prisma.userProfile.delete({ where: { id: profile2.id } }).catch(() => {});
+        }
+        await prisma.userCredentials.deleteMany({
+          where: { id: { in: [credentials1.id, credentials2.id] } },
+        }).catch(() => {});
+      }
     });
   });
 
   describe('updateUserProfile', () => {
+    let fixture: ProfileFixture;
+
+    beforeEach(async () => {
+      fixture = await createProfileFixture({
+        fullName: 'Original Name',
+        city: 'Houston',
+        skills: ['Original Skill'],
+        preferences: 'Original preferences',
+      });
+    });
+
+    afterEach(async () => {
+      await fixture.cleanup();
+    });
+
     const updateInput: UpdateUserProfileInput = {
       fullName: 'John Updated',
       city: 'Austin',
@@ -104,7 +358,7 @@ describe('userProfile DAL', () => {
     };
 
     it('should update existing profile successfully', async () => {
-      const updatedProfile = await updateUserProfile('2', updateInput);
+      const updatedProfile = await updateUserProfile(fixture.userId, updateInput);
 
       expect(updatedProfile).toBeTruthy();
       expect(updatedProfile?.fullName).toBe(updateInput.fullName);
@@ -112,8 +366,8 @@ describe('userProfile DAL', () => {
       expect(updatedProfile?.skills).toEqual(updateInput.skills);
       expect(updatedProfile?.preferences).toBe(updateInput.preferences);
       // Should preserve unchanged fields
-      expect(updatedProfile?.userId).toBe('2');
-      expect(updatedProfile?.address1).toBe('123 Main St');
+      expect(updatedProfile?.userId).toBe(fixture.userId);
+      expect(updatedProfile?.address1).toBe(fixture.defaults.address1);
       expect(updatedProfile?.state).toBe('TX');
     });
 
@@ -124,17 +378,17 @@ describe('userProfile DAL', () => {
     });
 
     it('should update updatedAt timestamp', async () => {
-      const originalDate = new Date('2024-01-01');
-      const updatedProfile = await updateUserProfile('2', updateInput);
+      const beforeUpdate = await prisma.userProfile.findUnique({ where: { userId: fixture.userId } });
+      const updatedProfile = await updateUserProfile(fixture.userId, updateInput);
 
       expect(updatedProfile?.updatedAt).toBeInstanceOf(Date);
-      expect(updatedProfile?.updatedAt.getTime()).toBeGreaterThan(originalDate.getTime());
+      expect(updatedProfile?.updatedAt.getTime()).toBeGreaterThan(beforeUpdate!.updatedAt.getTime());
     });
 
     it('should handle partial updates', async () => {
       const partialUpdate = { fullName: 'Partially Updated' };
       
-      const updatedProfile = await updateUserProfile('2', partialUpdate);
+      const updatedProfile = await updateUserProfile(fixture.userId, partialUpdate);
 
       expect(updatedProfile?.fullName).toBe('Partially Updated');
       // Other fields should exist (previous tests may have modified them)
@@ -252,11 +506,15 @@ describe('userProfile DAL', () => {
 
   describe('getUserProfileStatus', () => {
     it('should return complete status for existing complete profile', async () => {
-      const status = await getUserProfileStatus('2');
+      const fixture = await createProfileFixture();
+
+      const status = await getUserProfileStatus(fixture.userId);
 
       expect(status.isComplete).toBe(true);
       expect(status.profile).toBeTruthy();
-      expect(status.profile?.userId).toBe('2');
+      expect(status.profile?.userId).toBe(fixture.userId);
+
+      await fixture.cleanup();
     });
 
     it('should return incomplete status for non-existent profile', async () => {
@@ -267,27 +525,31 @@ describe('userProfile DAL', () => {
     });
 
     it('should return incomplete status for incomplete profile', async () => {
-      // First create an incomplete profile
-      const incompleteInput: CreateUserProfileInput = {
-        userId: 'incomplete-user',
-        fullName: '', // Missing required field
-        address1: '123 Test St',
-        address2: '',
-        city: 'Test City',
-        state: 'TX',
-        zipCode: '12345',
-        skills: ['Test Skill'],
-        preferences: '',
-        availability: ['2024-12-15']
-      };
+      const credentials = await createTestCredentials('incomplete-profile');
 
-      await createUserProfile(incompleteInput);
+      const incompleteProfile = await prisma.userProfile.create({
+        data: {
+          userId: credentials.id,
+          fullName: '', // Missing required field
+          address1: '123 Test St',
+          address2: null,
+          city: 'Test City',
+          state: 'TX',
+          zipCode: '12345',
+          skills: ['Test Skill'],
+          preferences: '',
+          availability: ['2024-12-15'],
+        },
+      });
 
       // Now check status
-      const status = await getUserProfileStatus('incomplete-user');
+      const status = await getUserProfileStatus(credentials.id);
 
       expect(status.isComplete).toBe(false);
       expect(status.profile).toBeTruthy();
+
+      await prisma.userProfile.delete({ where: { id: incompleteProfile.id } }).catch(() => {});
+      await prisma.userCredentials.delete({ where: { id: credentials.id } }).catch(() => {});
     });
   });
 });
