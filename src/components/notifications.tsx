@@ -311,25 +311,29 @@ export default function Notifications({ userRole }: NotificationsProps)
                       {/* event details section */}
                       {notification.eventInfo && (
                         <div className={`rounded-lg p-3 mb-3 space-y-1 ${
-                          !notification.isRead 
+                          !notification.isRead
                             ? `bg-gray-700/50`
                             : 'bg-gray-700/30'
                         }`}>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className={`w-4 h-4 ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`} />
-                            <span className={`font-medium ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
-                              {notification.eventInfo.eventName}
-                            </span>
-                          </div>
-                          <div className={`flex items-center gap-4 text-sm ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              <span>{new Date(notification.eventInfo.eventDate).toLocaleDateString()}</span>
+                          {((notification.eventInfo as any).eventName || (notification.eventInfo as any).name) && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Calendar className={`w-4 h-4 ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`} />
+                              <span className={`font-medium ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
+                                {(notification.eventInfo as any).eventName || (notification.eventInfo as any).name}
+                              </span>
                             </div>
-                            {notification.eventInfo.location && (
+                          )}
+                          <div className={`flex items-center gap-4 text-sm ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
+                            {((notification.eventInfo as any).eventDate || (notification.eventInfo as any).date) && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                <span>{new Date((notification.eventInfo as any).eventDate || (notification.eventInfo as any).date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {(notification.eventInfo as any).location && (
                               <div className="flex items-center gap-1">
                                 <MapPin className="w-4 h-4" />
-                                <span>{notification.eventInfo.location}</span>
+                                <span>{(notification.eventInfo as any).location}</span>
                               </div>
                             )}
                           </div>
@@ -345,11 +349,16 @@ export default function Notifications({ userRole }: NotificationsProps)
                         }`}>
                           <div className="text-sm">
                             <div className={`font-medium mb-1 ${!notification.isRead ? 'text-gray-200' : 'text-gray-400'}`}>
-                              {notification.volunteerInfo.fullName}
+                              {(notification.volunteerInfo as any).fullName || (notification.volunteerInfo as any).name || 'Volunteer'}
                             </div>
                             <div className={`${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Skills: {notification.volunteerInfo.skills.join(', ')} •
-                              Available: {notification.volunteerInfo.availability.join(', ')}
+                              {(notification.volunteerInfo as any).skills && Array.isArray((notification.volunteerInfo as any).skills) && (
+                                <>Skills: {(notification.volunteerInfo as any).skills.join(', ')}</>
+                              )}
+                              {(notification.volunteerInfo as any).skills && (notification.volunteerInfo as any).availability && ' • '}
+                              {(notification.volunteerInfo as any).availability && Array.isArray((notification.volunteerInfo as any).availability) && (
+                                <>Available: {(notification.volunteerInfo as any).availability.join(', ')}</>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -358,13 +367,19 @@ export default function Notifications({ userRole }: NotificationsProps)
                       {/* matching statistics (admins only) */}
                       {notification.matchStats && (
                         <div className={`rounded-lg p-3 mb-3 ${
-                          !notification.isRead 
+                          !notification.isRead
                             ? `bg-gray-700/50`
                             : 'bg-gray-700/30'
                         }`}>
                           <div className={`text-sm ${!notification.isRead ? 'text-gray-300' : 'text-gray-500'}`}>
-                            {notification.matchStats.volunteersMatched} volunteers matched across {notification.matchStats.eventsCount} events 
-                            ({notification.matchStats.efficiency} efficiency)
+                            {(notification.matchStats as any).volunteersMatched && (notification.matchStats as any).eventsCount ? (
+                              <>
+                                {(notification.matchStats as any).volunteersMatched} volunteers matched across {(notification.matchStats as any).eventsCount} events
+                                {(notification.matchStats as any).efficiency && <> ({(notification.matchStats as any).efficiency} efficiency)</>}
+                              </>
+                            ) : (
+                              <>Match statistics available</>
+                            )}
                           </div>
                         </div>
                       )}

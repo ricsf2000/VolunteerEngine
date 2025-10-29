@@ -1,6 +1,9 @@
 import { prisma } from '@/app/lib/db';
-import { UserProfile } from './userProfile';
-import { EventDetails } from './eventDetails';
+import type { NotificationData, UserProfile, EventDetails } from '@/generated/prisma';
+import type { InputJsonValue } from '@/generated/prisma/runtime/library';
+
+// re-export NotificationData for use in other modules
+export type { NotificationData };
 
 // type definitions (moved from component)
 // uses only fields from event details interface
@@ -8,26 +11,6 @@ export type EventInfo = Pick<EventDetails, 'eventName' | 'eventDate' | 'location
 
 // reusing user profile fields for volunteer info in notifications
 export type VolunteerInfo = Pick<UserProfile, 'fullName' | 'skills' | 'availability'>;
-
-export interface MatchStats {
-  volunteersMatched: number;
-  eventsCount: number;
-  efficiency: string;
-}
-
-export interface NotificationData {
-  id: number;
-  type: 'assignment' | 'update' | 'reminder' | 'confirmation' | 'volunteer_application' | 'event_full' | 'matching_complete' | 'volunteer_dropout' | 'cancellation';
-  title: string;
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-  userId: string;
-  userRole: 'volunteer' | 'admin';
-  eventInfo?: EventInfo;
-  volunteerInfo?: VolunteerInfo;
-  matchStats?: MatchStats;
-}
 
 // dal functions - pure database operations (no business logic!)
 
@@ -42,15 +25,7 @@ export async function getNotificationsByUserId(userId: string): Promise<Notifica
       },
     });
 
-    // Convert Prisma result to NotificationData format
-    return notifications.map(n => ({
-      ...n,
-      type: n.type as NotificationData['type'],
-      userRole: n.userRole as NotificationData['userRole'],
-      eventInfo: n.eventInfo ? (n.eventInfo as unknown as EventInfo) : undefined,
-      volunteerInfo: n.volunteerInfo ? (n.volunteerInfo as unknown as VolunteerInfo) : undefined,
-      matchStats: n.matchStats ? (n.matchStats as unknown as MatchStats) : undefined,
-    }));
+    return notifications;
   } catch (error) {
     console.error('Error fetching notifications by user ID:', error);
     return [];
@@ -68,14 +43,7 @@ export async function getNotificationsByUserRole(userRole: 'volunteer' | 'admin'
       },
     });
 
-    return notifications.map(n => ({
-      ...n,
-      type: n.type as NotificationData['type'],
-      userRole: n.userRole as NotificationData['userRole'],
-      eventInfo: n.eventInfo ? (n.eventInfo as unknown as EventInfo) : undefined,
-      volunteerInfo: n.volunteerInfo ? (n.volunteerInfo as unknown as VolunteerInfo) : undefined,
-      matchStats: n.matchStats ? (n.matchStats as unknown as MatchStats) : undefined,
-    }));
+    return notifications;
   } catch (error) {
     console.error('Error fetching notifications by user role:', error);
     return [];
@@ -92,14 +60,7 @@ export async function updateNotificationReadStatus(
       data: { isRead },
     });
 
-    return {
-      ...notification,
-      type: notification.type as NotificationData['type'],
-      userRole: notification.userRole as NotificationData['userRole'],
-      eventInfo: notification.eventInfo ? (notification.eventInfo as unknown as EventInfo) : undefined,
-      volunteerInfo: notification.volunteerInfo ? (notification.volunteerInfo as unknown as VolunteerInfo) : undefined,
-      matchStats: notification.matchStats ? (notification.matchStats as unknown as MatchStats) : undefined,
-    };
+    return notification;
   } catch (error) {
     console.error('Error updating notification read status:', error);
     return null;
@@ -143,20 +104,13 @@ export async function createNotification(data: Omit<NotificationData, 'id'>): Pr
         isRead: data.isRead,
         userId: data.userId,
         userRole: data.userRole,
-        eventInfo: data.eventInfo ? (data.eventInfo as any) : undefined,
-        volunteerInfo: data.volunteerInfo ? (data.volunteerInfo as any) : undefined,
-        matchStats: data.matchStats ? (data.matchStats as any) : undefined,
+        eventInfo: data.eventInfo as InputJsonValue | undefined,
+        volunteerInfo: data.volunteerInfo as InputJsonValue | undefined,
+        matchStats: data.matchStats as InputJsonValue | undefined,
       },
     });
 
-    return {
-      ...newNotification,
-      type: newNotification.type as NotificationData['type'],
-      userRole: newNotification.userRole as NotificationData['userRole'],
-      eventInfo: newNotification.eventInfo ? (newNotification.eventInfo as unknown as EventInfo) : undefined,
-      volunteerInfo: newNotification.volunteerInfo ? (newNotification.volunteerInfo as unknown as VolunteerInfo) : undefined,
-      matchStats: newNotification.matchStats ? (newNotification.matchStats as unknown as MatchStats) : undefined,
-    };
+    return newNotification;
   } catch (error) {
     console.error('Error creating notification:', error);
     throw new Error('Failed to create notification');

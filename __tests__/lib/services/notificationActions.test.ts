@@ -308,13 +308,13 @@ describe('Notification Actions (Service Layer)', () => {
 
       const eventInfo = {
         eventName: 'Test Event',
-        eventDate: new Date('2024-03-25T09:00:00'),
+        eventDate: new Date('2024-03-25T09:00:00').toISOString(),
         location: 'Test Location',
         requiredSkills: ['Food Service'],
         urgency: 'high' as const,
       };
 
-      await sendNotification('2', 'volunteer', 'assignment', 'Title', 'Message', eventInfo);
+      await sendNotification('2', 'volunteer', 'assignment', 'Title', 'Message', eventInfo as any);
 
       expect(notificationDAL.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
