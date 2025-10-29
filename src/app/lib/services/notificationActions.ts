@@ -13,15 +13,22 @@ import {
 export async function getUserNotifications(): Promise<NotificationData[]> {
   try {
     const session = await auth();
+    console.log('[getUserNotifications] Session:', JSON.stringify(session, null, 2));
+
     if (!session?.user) {
+      console.log('[getUserNotifications] No session or user found');
       return [];
     }
 
     const userId = (session.user as any).id;
+    console.log('[getUserNotifications] User ID:', userId);
+
     const notifications = await getNotificationsByUserId(userId);
+    console.log('[getUserNotifications] Notifications count:', notifications.length);
+
     return notifications.sort((a, b) => b.id - a.id);
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    console.error('[getUserNotifications] Error fetching notifications:', error);
     return [];
   }
 }
@@ -121,7 +128,9 @@ export async function sendNotification(
       message: message.trim(),
       timestamp: new Date().toISOString(),
       isRead: false,
-      eventInfo
+      eventInfo: eventInfo || null,
+      volunteerInfo: null,
+      matchStats: null
     });
 
     return notification;
