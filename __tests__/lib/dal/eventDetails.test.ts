@@ -10,17 +10,44 @@ import {
 } from '@/app/lib/dal/eventDetails';
 
 describe('eventDetails DAL', () => {
+  let testEventId: string;
+
+  // Create a test event before each test
+  beforeEach(async () => {
+    const testEvent = await createEvent({
+      eventName: 'Test Event for DAL',
+      description: 'This is a test event created for testing purposes',
+      location: 'Test Location, 123 Test St',
+      requiredSkills: ['Testing'],
+      urgency: 'medium',
+      eventDate: new Date('2025-12-25T10:00:00')
+    });
+    testEventId = testEvent.id;
+  });
+
+  // Clean up test event after each test
+  afterEach(async () => {
+    if (testEventId) {
+      try {
+        await deleteEvent(testEventId);
+      } catch (error) {
+        // Event may have already been deleted by the test (e.g., in deleteEvent tests)
+        // This is fine, just continue
+      }
+    }
+  });
+
   describe('getEventById', () => {
     it('should return existing event for valid ID', async () => {
-      const event = await getEventById('1');
+      const event = await getEventById(testEventId);
 
       expect(event).toBeTruthy();
-      expect(event?.id).toBe('1');
-      expect(event?.eventName).toBe('Community Food Drive');
+      expect(event?.id).toBe(testEventId);
+      expect(event?.eventName).toBe('Test Event for DAL');
     });
 
     it('should return null for non-existent ID', async () => {
-      const event = await getEventById('999');
+      const event = await getEventById('00000000-0000-0000-0000-000000000000');
 
       expect(event).toBeNull();
     });
@@ -58,12 +85,12 @@ describe('eventDetails DAL', () => {
 
   describe('createEvent', () => {
     const validInput: CreateEventDetailsInput = {
-      eventName: 'Test Event',
+      eventName: 'New Test Event',
       description: 'A test event for unit testing',
       location: 'Test Location',
       requiredSkills: ['Testing', 'Quality Assurance'],
       urgency: 'medium',
-      eventDate: new Date('2024-12-25')
+      eventDate: new Date('2025-12-25T10:00:00')
     };
 
     it('should create new event successfully', async () => {
@@ -75,42 +102,44 @@ describe('eventDetails DAL', () => {
       expect(newEvent.location).toBe(validInput.location);
       expect(newEvent.requiredSkills).toEqual(validInput.requiredSkills);
       expect(newEvent.urgency).toBe(validInput.urgency);
-      expect(newEvent.eventDate).toBe(validInput.eventDate);
+      expect(newEvent.eventDate).toEqual(validInput.eventDate);
       expect(newEvent.id).toBeTruthy();
       expect(newEvent.createdAt).toBeInstanceOf(Date);
       expect(newEvent.updatedAt).toBeInstanceOf(Date);
     });
 
-    it('should assign incremental IDs', async () => {
+    it('should assign unique UUIDs', async () => {
       const input1 = { ...validInput, eventName: 'Event 1' };
       const input2 = { ...validInput, eventName: 'Event 2' };
 
       const event1 = await createEvent(input1);
       const event2 = await createEvent(input2);
 
-      expect(parseInt(event2.id)).toBeGreaterThan(parseInt(event1.id));
+      expect(event1.id).not.toBe(event2.id);
+      expect(event1.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      expect(event2.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     });
   });
 
   describe('updateEvent', () => {
     const updateInput: UpdateEventDetailsInput = {
       eventName: 'Updated Event Name',
-      description: 'Updated description',
+      description: 'Updated description for testing',
       urgency: 'high'
     };
 
     it('should update existing event successfully', async () => {
-      const updatedEvent = await updateEvent('1', updateInput);
+      const updatedEvent = await updateEvent(testEventId, updateInput);
 
       expect(updatedEvent).toBeTruthy();
       expect(updatedEvent?.eventName).toBe(updateInput.eventName);
       expect(updatedEvent?.description).toBe(updateInput.description);
       expect(updatedEvent?.urgency).toBe(updateInput.urgency);
-      expect(updatedEvent?.id).toBe('1');
+      expect(updatedEvent?.id).toBe(testEventId);
     });
 
     it('should return null for non-existent event', async () => {
-      const result = await updateEvent('999', updateInput);
+      const result = await updateEvent('00000000-0000-0000-0000-000000000000', updateInput);
 
       expect(result).toBeNull();
     });
@@ -118,30 +147,30 @@ describe('eventDetails DAL', () => {
     it('should handle partial updates', async () => {
       const partialUpdate = { eventName: 'Partially Updated Event' };
 
-      const updatedEvent = await updateEvent('1', partialUpdate);
+      const updatedEvent = await updateEvent(testEventId, partialUpdate);
 
       expect(updatedEvent?.eventName).toBe('Partially Updated Event');
-      expect(updatedEvent?.id).toBe('1');
+      expect(updatedEvent?.id).toBe(testEventId);
     });
   });
 
   describe('deleteEvent', () => {
     it('should delete existing event successfully', async () => {
       // First verify the event exists
-      const eventBefore = await getEventById('1');
+      const eventBefore = await getEventById(testEventId);
       expect(eventBefore).toBeTruthy();
 
       // Delete the event
-      const result = await deleteEvent('1');
+      const result = await deleteEvent(testEventId);
       expect(result).toBe(true);
 
       // Verify it's deleted
-      const eventAfter = await getEventById('1');
+      const eventAfter = await getEventById(testEventId);
       expect(eventAfter).toBeNull();
     });
 
     it('should return false for non-existent event', async () => {
-      const result = await deleteEvent('999');
+      const result = await deleteEvent('00000000-0000-0000-0000-000000000000');
 
       expect(result).toBe(false);
     });
