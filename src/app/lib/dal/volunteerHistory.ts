@@ -1,8 +1,11 @@
+import { prisma } from '@/app/lib/db';
+import type { VolunteerHistory as PrismaVolunteerHistory, ParticipantStatus } from '@/generated/prisma';
+
 export interface VolunteerHistory {
   id: string; // Primary key
   userId: string; // Foreign key to UserCredentials
   eventId: string; // Foreign key to EventDetails
-  participantStatus: 'pending' | 'confirmed' | 'cancelled' | 'no-show';
+  participantStatus: 'pending' | 'confirmed' | 'cancelled' | 'no_show';
   registrationDate: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -11,58 +14,97 @@ export interface VolunteerHistory {
 export type CreateVolunteerHistoryInput = Omit<VolunteerHistory, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateVolunteerHistoryInput = Partial<Omit<VolunteerHistory, 'id' | 'userId' | 'eventId' | 'createdAt' | 'updatedAt'>>;
 
-// Hardcoded history - replace with Prisma queries later
-const volunteerHistory: VolunteerHistory[] = [
-  {
-    id: '1', 
-    userId: '2', // volunteer@test.com
-    eventId: '1', // Community Food Drive
-    participantStatus: 'confirmed',
-    registrationDate: new Date('2024-12-01'),
-    createdAt: new Date('2024-12-01'),
-    updatedAt: new Date('2024-12-01'),
-  },
-];
+/**
+ * Helper function to convert Prisma VolunteerHistory to our interface
+ */
+function toVolunteerHistory(history: PrismaVolunteerHistory): VolunteerHistory {
+  return {
+    id: history.id,
+    userId: history.userId,
+    eventId: history.eventId,
+    participantStatus: history.participantStatus as 'pending' | 'confirmed' | 'cancelled' | 'no_show',
+    registrationDate: history.registrationDate,
+    createdAt: history.createdAt,
+    updatedAt: history.updatedAt,
+  };
+}
 
 export async function getHistoryByUserId(userId: string): Promise<VolunteerHistory[]> {
-  return volunteerHistory.filter(h => h.userId === userId);
+  try {
+    const histories = await prisma.volunteerHistory.findMany({
+      where: { userId },
+      orderBy: {
+        registrationDate: 'desc',
+      },
+    });
+
+    return histories.map(toVolunteerHistory);
+  } catch (error) {
+    console.error('Error fetching volunteer history by user ID:', error);
+    return [];
+  }
 }
 
 export async function getHistoryById(id: string): Promise<VolunteerHistory | null> {
-  const entry = volunteerHistory.find(h => h.id === id);
-  return entry || null;
+  try {
+    const history = await prisma.volunteerHistory.findUnique({
+      where: { id },
+    });
+
+    if (!history) return null;
+    return toVolunteerHistory(history);
+  } catch (error) {
+    console.error('Error fetching volunteer history by ID:', error);
+    return null;
+  }
 }
 
 export async function createVolunteerHistory(input: CreateVolunteerHistoryInput): Promise<VolunteerHistory> {
-  
-  const newHistory: VolunteerHistory = {
-    id: (volunteerHistory.length + 1).toString(),
-    ...input,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+  try {
+    const history = await prisma.volunteerHistory.create({
+      data: {
+        userId: input.userId,
+        eventId: input.eventId,
+        participantStatus: input.participantStatus as ParticipantStatus,
+        registrationDate: input.registrationDate,
+      },
+    });
 
-  volunteerHistory.push(newHistory);
-  
-  return newHistory;
+    return toVolunteerHistory(history);
+  } catch (error) {
+    console.error('Error creating volunteer history:', error);
+    throw error;
+  }
 }
 
 export async function updateVolunteerHistory(id: string, input: UpdateVolunteerHistoryInput): Promise<VolunteerHistory | null> {
+  try {
+    const history = await prisma.volunteerHistory.update({
+      where: { id },
+      data: {
+        ...(input.participantStatus !== undefined && { participantStatus: input.participantStatus as ParticipantStatus }),
+        ...(input.registrationDate !== undefined && { registrationDate: input.registrationDate }),
+      },
+    });
 
-  const historyIndex = volunteerHistory.findIndex(h => h.id === id);
-  if (historyIndex === -1) return null;
-
-  const history = volunteerHistory[historyIndex];
-
-  volunteerHistory[historyIndex] = {
-    ...history,
-    ...input,
-    updatedAt: new Date(),
-  };
-
-  return volunteerHistory[historyIndex];
+    return toVolunteerHistory(history);
+  } catch (error) {
+    console.error('Error updating volunteer history:', error);
+    return null;
+  }
 }
 
 export async function getAllHistory(): Promise<VolunteerHistory[]> {
-  return [...volunteerHistory];
+  try {
+    const histories = await prisma.volunteerHistory.findMany({
+      orderBy: {
+        registrationDate: 'desc',
+      },
+    });
+
+    return histories.map(toVolunteerHistory);
+  } catch (error) {
+    console.error('Error fetching all volunteer history:', error);
+    return [];
+  }
 }
