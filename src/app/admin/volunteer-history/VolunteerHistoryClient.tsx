@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 
 type VolunteerHistoryWithEvent = {
-  id: number;
+  id: string;
   fullName: string;
   eventName: string;
   eventDescription: string;
