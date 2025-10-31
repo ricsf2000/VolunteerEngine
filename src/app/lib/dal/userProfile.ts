@@ -1,67 +1,76 @@
 import { prisma } from '@/app/lib/db';
-import type { UserProfile as PrismaUserProfile } from '@/generated/prisma';
+import { Prisma, type UserProfile as PrismaUserProfile } from '@/generated/prisma';
 
-export interface UserProfile {
+export type UserProfile = {
   id: string;
-  userId: string; // Foreign key to UserCredentials
+  userId: string;
   fullName: string;
-  address1: string; // Primary address (required)
-  address2: string; // Secondary address (optional - apartment, suite, etc.)
+  address1: string;
+  address2: string;
   city: string;
   state: string;
-  zipCode: string; // Changed to match form field name
-  skills: string[]; // Array of skill names
-  preferences: string; // Text field for volunteer preferences
-  availability: string[]; // Array of available dates
+  zipCode: string;
+  skills: string[];
+  preferences: string;
+  availability: string[];
   createdAt: Date;
   updatedAt: Date;
-}
+};
 
-// Remove the auto-generated fields for creation
 export type CreateUserProfileInput = Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>;
-
-// For updates, make all fields optional except userId
 export type UpdateUserProfileInput = Partial<Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>;
 
-/**
- * Helper function to convert Prisma UserProfile to our interface
- */
-function toUserProfile(profile: PrismaUserProfile): UserProfile {
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item));
+  }
+  return [];
+}
+
+function normalizeProfile(profile: PrismaUserProfile): UserProfile {
   return {
     id: profile.id,
     userId: profile.userId,
     fullName: profile.fullName,
     address1: profile.address1,
-    address2: profile.address2 || '',
+    address2: profile.address2 ?? '',
     city: profile.city,
     state: profile.state,
     zipCode: profile.zipCode,
-    skills: profile.skills,
-    preferences: profile.preferences || '',
-    availability: profile.availability,
+    skills: toStringArray(profile.skills),
+    preferences: profile.preferences,
+    availability: toStringArray(profile.availability),
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
   };
 }
 
+function mapAddress2(address2?: string): string | null | undefined {
+  if (address2 === undefined) return undefined;
+  const trimmed = address2.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 export async function getUserProfileByUserId(userId: string): Promise<UserProfile | null> {
+  if (!userId) return null;
+
   try {
     const profile = await prisma.userProfile.findUnique({
-      where: { userId }
+      where: { userId },
     });
-
-    if (!profile) return null;
-    return toUserProfile(profile);
+    return profile ? normalizeProfile(profile) : null;
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error('Error fetching user profile by userId:', error);
     return null;
   }
 }
 
 export async function getAllUserProfiles(): Promise<UserProfile[]> {
   try {
-    const profiles = await prisma.userProfile.findMany();
-    return profiles.map(toUserProfile);
+    const profiles = await prisma.userProfile.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return profiles.map(normalizeProfile);
   } catch (error) {
     console.error('Error fetching all user profiles:', error);
     return [];
@@ -69,56 +78,68 @@ export async function getAllUserProfiles(): Promise<UserProfile[]> {
 }
 
 export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfile> {
-  try {
-    // Check if profile already exists
-    const existingProfile = await getUserProfileByUserId(input.userId);
-    if (existingProfile) {
-      throw new Error('Profile already exists for this user');
-    }
+  const existing = await prisma.userProfile.findUnique({
+    where: { userId: input.userId },
+  });
 
-    const profile = await prisma.userProfile.create({
+  if (existing) {
+    throw new Error('Profile already exists for this user');
+  }
+
+  try {
+    const created = await prisma.userProfile.create({
       data: {
         userId: input.userId,
         fullName: input.fullName,
         address1: input.address1,
-        address2: input.address2 || '',
+        address2: mapAddress2(input.address2) ?? null,
         city: input.city,
         state: input.state,
         zipCode: input.zipCode,
         skills: input.skills,
-        preferences: input.preferences || '',
+        preferences: input.preferences,
         availability: input.availability,
-      }
+      },
     });
 
-    return toUserProfile(profile);
+    return normalizeProfile(created);
   } catch (error) {
     console.error('Error creating user profile:', error);
-    throw error;
+    throw new Error('Failed to create user profile');
   }
 }
 
 export async function updateUserProfile(userId: string, input: UpdateUserProfileInput): Promise<UserProfile | null> {
-  try {
-    const profile = await prisma.userProfile.update({
-      where: { userId },
-      data: {
-        ...(input.fullName !== undefined && { fullName: input.fullName }),
-        ...(input.address1 !== undefined && { address1: input.address1 }),
-        ...(input.address2 !== undefined && { address2: input.address2 }),
-        ...(input.city !== undefined && { city: input.city }),
-        ...(input.state !== undefined && { state: input.state }),
-        ...(input.zipCode !== undefined && { zipCode: input.zipCode }),
-        ...(input.skills !== undefined && { skills: input.skills }),
-        ...(input.preferences !== undefined && { preferences: input.preferences }),
-        ...(input.availability !== undefined && { availability: input.availability }),
-      }
-    });
+  if (!userId) return null;
 
-    return toUserProfile(profile);
+  const data: Prisma.UserProfileUpdateInput = {};
+
+  if (input.fullName !== undefined) data.fullName = input.fullName;
+  if (input.address1 !== undefined) data.address1 = input.address1;
+  if (input.address2 !== undefined) data.address2 = mapAddress2(input.address2) ?? null;
+  if (input.city !== undefined) data.city = input.city;
+  if (input.state !== undefined) data.state = input.state;
+  if (input.zipCode !== undefined) data.zipCode = input.zipCode;
+  if (input.skills !== undefined) data.skills = input.skills;
+  if (input.preferences !== undefined) data.preferences = input.preferences;
+  if (input.availability !== undefined) data.availability = input.availability;
+
+  if (Object.keys(data).length === 0) {
+    return getUserProfileByUserId(userId);
+  }
+
+  try {
+    const updated = await prisma.userProfile.update({
+      where: { userId },
+      data,
+    });
+    return normalizeProfile(updated);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return null;
+    }
     console.error('Error updating user profile:', error);
-    return null;
+    throw new Error('Failed to update user profile');
   }
 }
 
@@ -127,23 +148,29 @@ export function isProfileComplete(profile: UserProfile | null): boolean {
     console.log('isProfileComplete: Profile is null');
     return false;
   }
-  
+
   const checks = {
     fullName: !!profile.fullName?.trim(),
-    address1: !!profile.address1?.trim(), 
+    address1: !!profile.address1?.trim(),
     city: !!profile.city?.trim(),
     state: !!profile.state,
     zipCode: (profile.zipCode?.length || 0) >= 5,
     skills: (profile.skills?.length || 0) > 0,
-    availability: (profile.availability?.length || 0) > 0
+    availability: (profile.availability?.length || 0) > 0,
   };
-  
+
   console.log('isProfileComplete checks:', checks);
   console.log('zipCode length:', profile.zipCode?.length);
-  
-  const isComplete = checks.fullName && checks.address1 && checks.city && 
-                    checks.state && checks.zipCode && checks.skills && checks.availability;
-  
+
+  const isComplete =
+    checks.fullName &&
+    checks.address1 &&
+    checks.city &&
+    checks.state &&
+    checks.zipCode &&
+    checks.skills &&
+    checks.availability;
+
   console.log('isProfileComplete result:', isComplete);
   return isComplete;
 }
@@ -151,11 +178,9 @@ export function isProfileComplete(profile: UserProfile | null): boolean {
 export async function getUserProfileStatus(userId: string): Promise<{ isComplete: boolean; profile?: UserProfile }> {
   const profile = await getUserProfileByUserId(userId);
   const isComplete = isProfileComplete(profile);
-  
+
   if (profile) {
     return { isComplete, profile };
-  } else {
-    return { isComplete };
   }
+  return { isComplete };
 }
-
