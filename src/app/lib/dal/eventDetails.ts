@@ -41,8 +41,7 @@ export async function getEventById(id: string): Promise<EventDetails | null> {
 
     if (!event) return null;
     return toEventDetails(event);
-  } catch (error) {
-    console.error('Error fetching event by ID:', error);
+  } catch {
     return null;
   }
 }
@@ -56,8 +55,7 @@ export async function getAllEvents(): Promise<EventDetails[]> {
     });
 
     return events.map(toEventDetails);
-  } catch (error) {
-    console.error('Error fetching all events:', error);
+  } catch {
     return [];
   }
 }
@@ -77,7 +75,6 @@ export async function createEvent(input: CreateEventDetailsInput): Promise<Event
 
     return toEventDetails(event);
   } catch (error) {
-    console.error('Error creating event:', error);
     throw error;
   }
 }
@@ -97,8 +94,7 @@ export async function updateEvent(id: string, input: UpdateEventDetailsInput): P
     });
 
     return toEventDetails(event);
-  } catch (error) {
-    console.error('Error updating event:', error);
+  } catch {
     return null;
   }
 }

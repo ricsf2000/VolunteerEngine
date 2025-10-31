@@ -39,7 +39,7 @@ export async function getHistoryByUserId(userId: string): Promise<VolunteerHisto
     });
 
     return histories.map(toVolunteerHistory);
-  } catch (error) { console.error('Error fetching volunteer history by user ID:', error); return []; }
+  } catch { return []; }
 }
 
 export async function getHistoryById(id: string): Promise<VolunteerHistory | null> {
@@ -50,7 +50,7 @@ export async function getHistoryById(id: string): Promise<VolunteerHistory | nul
 
     if (!history) return null;
     return toVolunteerHistory(history);
-  } catch (error) { console.error('Error fetching volunteer history by ID:', error); return null; }
+  } catch { return null; }
 }
 
 export async function createVolunteerHistory(input: CreateVolunteerHistoryInput): Promise<VolunteerHistory> {
@@ -65,7 +65,7 @@ export async function createVolunteerHistory(input: CreateVolunteerHistoryInput)
     });
 
     return toVolunteerHistory(history);
-  } catch (error) { console.error('Error creating volunteer history:', error); throw error; }
+  } catch (error) { throw error; }
 }
 
 export async function updateVolunteerHistory(id: string, input: UpdateVolunteerHistoryInput): Promise<VolunteerHistory | null> {
@@ -79,7 +79,7 @@ export async function updateVolunteerHistory(id: string, input: UpdateVolunteerH
     });
 
     return toVolunteerHistory(history);
-  } catch (error) { console.error('Error updating volunteer history:', error); return null; }
+  } catch { return null; }
 }
 
 export async function getAllHistory(): Promise<VolunteerHistory[]> {
@@ -91,5 +91,5 @@ export async function getAllHistory(): Promise<VolunteerHistory[]> {
     });
 
     return histories.map(toVolunteerHistory);
-  } catch (error) { console.error('Error fetching all volunteer history:', error); return []; }
+  } catch { return []; }
 }

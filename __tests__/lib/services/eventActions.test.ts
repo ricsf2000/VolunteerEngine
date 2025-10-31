@@ -15,11 +15,22 @@ jest.mock('@/app/lib/dal/eventDetails', () => ({
   deleteEvent: jest.fn()
 }));
 
+jest.mock('@/app/lib/db', () => ({
+  prisma: {
+    volunteerHistory: {
+      findMany: jest.fn()
+    }
+  }
+}));
+
+import { prisma } from '@/app/lib/db';
+
 const mockGetAllEvents = eventDetailsDAL.getAllEvents as jest.MockedFunction<any>;
 const mockGetEventById = eventDetailsDAL.getEventById as jest.MockedFunction<any>;
 const mockCreateEvent = eventDetailsDAL.createEvent as jest.MockedFunction<any>;
 const mockUpdateEvent = eventDetailsDAL.updateEvent as jest.MockedFunction<any>;
 const mockDeleteEvent = eventDetailsDAL.deleteEvent as jest.MockedFunction<any>;
+const mockPrismaVolunteerHistory = prisma.volunteerHistory.findMany as jest.MockedFunction<any>;
 
 describe('Event Actions', () => {
   beforeEach(() => {
@@ -32,11 +43,17 @@ describe('Event Actions', () => {
         { id: '1', eventName: 'Event 1', description: 'Description 1', location: 'Location 1', requiredSkills: ['Skill 1'], urgency: 'medium', eventDate: new Date() },
         { id: '2', eventName: 'Event 2', description: 'Description 2', location: 'Location 2', requiredSkills: ['Skill 2'], urgency: 'high', eventDate: new Date() }
       ];
+      const mockEventsWithVolunteers = [
+        { ...mockEvents[0], volunteers: [] },
+        { ...mockEvents[1], volunteers: [] }
+      ];
+
       mockGetAllEvents.mockResolvedValue(mockEvents);
+      mockPrismaVolunteerHistory.mockResolvedValue([]);
 
       const result = await getEvents();
 
-      expect(result).toEqual({ success: true, data: mockEvents });
+      expect(result).toEqual({ success: true, data: mockEventsWithVolunteers });
       expect(mockGetAllEvents).toHaveBeenCalled();
     });
 
