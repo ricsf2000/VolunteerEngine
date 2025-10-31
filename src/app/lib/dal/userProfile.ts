@@ -1,3 +1,6 @@
+import { prisma } from '@/app/lib/db';
+import type { UserProfile as PrismaUserProfile } from '@/generated/prisma';
+
 export interface UserProfile {
   id: string;
   userId: string; // Foreign key to UserCredentials
@@ -20,77 +23,103 @@ export type CreateUserProfileInput = Omit<UserProfile, 'id' | 'createdAt' | 'upd
 // For updates, make all fields optional except userId
 export type UpdateUserProfileInput = Partial<Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>;
 
-// Hardcoded profiles - replace with Prisma queries later
-const userProfiles: UserProfile[] = [
-  {
-    id: '1',
-    userId: '2', // volunteer@test.com
-    fullName: 'John Volunteer',
-    address1: '123 Main St',
-    address2: 'Apt 4B',
-    city: 'Houston',
-    state: 'TX',
-    zipCode: '77001',
-    skills: ['Event Planning', 'Food Service', 'Community Outreach'],
-    preferences: 'Prefer weekend events and community-focused activities',
-    availability: ['2024-12-15', '2024-12-22', '2025-01-05'],
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-  
-];
+/**
+ * Helper function to convert Prisma UserProfile to our interface
+ */
+function toUserProfile(profile: PrismaUserProfile): UserProfile {
+  return {
+    id: profile.id,
+    userId: profile.userId,
+    fullName: profile.fullName,
+    address1: profile.address1,
+    address2: profile.address2 || '',
+    city: profile.city,
+    state: profile.state,
+    zipCode: profile.zipCode,
+    skills: profile.skills,
+    preferences: profile.preferences || '',
+    availability: profile.availability,
+    createdAt: profile.createdAt,
+    updatedAt: profile.updatedAt,
+  };
+}
 
 export async function getUserProfileByUserId(userId: string): Promise<UserProfile | null> {
-  const profile = userProfiles.find(p => p.userId === userId);
-  return profile || null;
+  try {
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId }
+    });
+
+    if (!profile) return null;
+    return toUserProfile(profile);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
 }
 
 export async function getAllUserProfiles(): Promise<UserProfile[]> {
-  return [...userProfiles];
+  try {
+    const profiles = await prisma.userProfile.findMany();
+    return profiles.map(toUserProfile);
+  } catch (error) {
+    console.error('Error fetching all user profiles:', error);
+    return [];
+  }
 }
 
 export async function createUserProfile(input: CreateUserProfileInput): Promise<UserProfile> {
-  // Check if profile already exists
-  const existingProfile = await getUserProfileByUserId(input.userId);
-  if (existingProfile) {
-    throw new Error('Profile already exists for this user');
+  try {
+    // Check if profile already exists
+    const existingProfile = await getUserProfileByUserId(input.userId);
+    if (existingProfile) {
+      throw new Error('Profile already exists for this user');
+    }
+
+    const profile = await prisma.userProfile.create({
+      data: {
+        userId: input.userId,
+        fullName: input.fullName,
+        address1: input.address1,
+        address2: input.address2 || '',
+        city: input.city,
+        state: input.state,
+        zipCode: input.zipCode,
+        skills: input.skills,
+        preferences: input.preferences || '',
+        availability: input.availability,
+      }
+    });
+
+    return toUserProfile(profile);
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    throw error;
   }
-
-  const newProfile: UserProfile = {
-    id: (userProfiles.length + 1).toString(),
-    userId: input.userId,
-    fullName: input.fullName,
-    address1: input.address1,
-    address2: input.address2,
-    city: input.city,
-    state: input.state,
-    zipCode: input.zipCode,
-    skills: input.skills,
-    preferences: input.preferences,
-    availability: input.availability,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  userProfiles.push(newProfile);
-  
-  return newProfile;
 }
 
 export async function updateUserProfile(userId: string, input: UpdateUserProfileInput): Promise<UserProfile | null> {
-  const profileIndex = userProfiles.findIndex(p => p.userId === userId);
-  if (profileIndex === -1) return null;
-  
-  const profile = userProfiles[profileIndex];
-  
-  // Update only provided fields
-  userProfiles[profileIndex] = {
-    ...profile,
-    ...input,
-    updatedAt: new Date(),
-  };
-  
-  return userProfiles[profileIndex];
+  try {
+    const profile = await prisma.userProfile.update({
+      where: { userId },
+      data: {
+        ...(input.fullName !== undefined && { fullName: input.fullName }),
+        ...(input.address1 !== undefined && { address1: input.address1 }),
+        ...(input.address2 !== undefined && { address2: input.address2 }),
+        ...(input.city !== undefined && { city: input.city }),
+        ...(input.state !== undefined && { state: input.state }),
+        ...(input.zipCode !== undefined && { zipCode: input.zipCode }),
+        ...(input.skills !== undefined && { skills: input.skills }),
+        ...(input.preferences !== undefined && { preferences: input.preferences }),
+        ...(input.availability !== undefined && { availability: input.availability }),
+      }
+    });
+
+    return toUserProfile(profile);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return null;
+  }
 }
 
 export function isProfileComplete(profile: UserProfile | null): boolean {

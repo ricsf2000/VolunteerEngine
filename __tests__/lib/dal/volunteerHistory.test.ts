@@ -3,6 +3,7 @@ import {
   getHistoryById,
   createVolunteerHistory,
   updateVolunteerHistory,
+  getAllHistory,
   VolunteerHistory,
   CreateVolunteerHistoryInput,
   UpdateVolunteerHistoryInput
@@ -306,6 +307,42 @@ describe('volunteerHistory DAL', () => {
 
       userHistory.forEach(record => {
         expect(['pending', 'confirmed', 'cancelled', 'no_show']).toContain(record.participantStatus);
+      });
+    });
+  });
+
+  describe('getAllHistory', () => {
+    it('should return all volunteer history records', async () => {
+      const allHistory = await getAllHistory();
+
+      expect(allHistory).toBeTruthy();
+      expect(Array.isArray(allHistory)).toBe(true);
+      expect(allHistory.length).toBeGreaterThan(0);
+    });
+
+    it('should return history records sorted by registration date descending', async () => {
+      const allHistory = await getAllHistory();
+
+      if (allHistory.length > 1) {
+        for (let i = 0; i < allHistory.length - 1; i++) {
+          expect(allHistory[i].registrationDate.getTime()).toBeGreaterThanOrEqual(
+            allHistory[i + 1].registrationDate.getTime()
+          );
+        }
+      }
+    });
+
+    it('should return all history with correct structure', async () => {
+      const allHistory = await getAllHistory();
+
+      allHistory.forEach(record => {
+        expect(record).toHaveProperty('id');
+        expect(record).toHaveProperty('userId');
+        expect(record).toHaveProperty('eventId');
+        expect(record).toHaveProperty('participantStatus');
+        expect(record).toHaveProperty('registrationDate');
+        expect(record).toHaveProperty('createdAt');
+        expect(record).toHaveProperty('updatedAt');
       });
     });
   });

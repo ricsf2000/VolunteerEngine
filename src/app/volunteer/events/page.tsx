@@ -42,39 +42,63 @@ export default function VolunteerEvents() {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  // Fetch volunteer's assigned events from backend
+  // Fetch all available events from backend
   useEffect(() => {
     const fetchVolunteerEvents = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/volunteerHistory`, {
+        // Fetch all events
+        const eventsResponse = await fetch(`/api/events`, {
           cache: 'no-store',
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch volunteer history');
+        if (!eventsResponse.ok) {
+          throw new Error('Failed to fetch events');
         }
 
-        const data = await response.json();
+        const eventsData = await eventsResponse.json();
 
-        // Transform backend data to match frontend format
-        const transformedEvents: EventItem[] = data.map((entry: any) => ({
-          id: entry.eventId,
-          historyId: entry.id,
-          eventName: entry.eventName || "Unnamed Event",
-          description: entry.eventDescription || "",
-          location: entry.eventLocation || "",
-          requiredSkills: entry.eventSkills || [],
-          urgency: (entry.eventUrgency?.charAt(0).toUpperCase() + entry.eventUrgency?.slice(1)) || "Medium",
-          eventDate: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[0] : "",
-          eventTime: entry.eventDate ? new Date(entry.eventDate).toISOString().split('T')[1].slice(0, 5) : undefined,
-          status: entry.participantStatus || "pending",
-        }));
+        // Fetch volunteer's history to check which events they're assigned to
+        const historyResponse = await fetch(`/api/volunteerHistory`, {
+          cache: 'no-store',
+        });
 
-        // Filter out cancelled events
-        setEvents(transformedEvents.filter(e => e.status !== "cancelled"));
+        let volunteerHistory: any[] = [];
+        if (historyResponse.ok) {
+          volunteerHistory = await historyResponse.json();
+        }
+
+        // Transform events data to match frontend format
+        const transformedEvents: EventItem[] = eventsData.map((event: any) => {
+          // Check if volunteer has a history entry for this event
+          const historyEntry = volunteerHistory.find((h: any) => h.eventId === event.id);
+
+          // Normalize urgency to match the urgencyUI keys
+          let urgency: "Low" | "Medium" | "High" = "Medium";
+          if (event.urgency) {
+            const normalizedUrgency = event.urgency.toLowerCase();
+            if (normalizedUrgency === "high") urgency = "High";
+            else if (normalizedUrgency === "low") urgency = "Low";
+            else urgency = "Medium";
+          }
+
+          return {
+            id: event.id,
+            historyId: historyEntry?.id || '',
+            eventName: event.eventName || "Unnamed Event",
+            description: event.description || "",
+            location: event.location || "",
+            requiredSkills: event.requiredSkills || [],
+            urgency: urgency,
+            eventDate: event.eventDate ? new Date(event.eventDate).toISOString().split('T')[0] : "",
+            eventTime: event.eventDate ? new Date(event.eventDate).toISOString().split('T')[1].slice(0, 5) : undefined,
+            status: historyEntry?.participantStatus || "pending",
+          };
+        });
+
+        setEvents(transformedEvents);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load events");
         console.error("API call failed:", err);
@@ -86,9 +110,36 @@ export default function VolunteerEvents() {
     fetchVolunteerEvents();
   }, []);
 
+  const signUpForEvent = async (eventId: string, status: 'pending' | 'confirmed' = 'confirmed') => {
+    try {
+      // Create volunteer history entry
+      const response = await fetch(`/api/volunteerHistory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: eventId,
+          participantStatus: status,
+          registrationDate: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sign up for event');
+      }
+
+      const newHistory = await response.json();
+
+      // Update local state
+      setEvents(prev => prev.map(e => (e.id === eventId ? { ...e, historyId: newHistory.id, status: status } : e)));
+    } catch (err) {
+      console.error("Failed to sign up for event:", err);
+      alert("Failed to sign up for event. Please try again.");
+    }
+  };
+
   const confirmEvent = async (historyId: string, eventId: string) => {
     try {
-      const response = await fetch(`/api/volunteerHistory/${historyId}`, {
+      const response = await fetch(`/api/volunteerHistory?id=${historyId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'confirmed' }),
@@ -108,7 +159,7 @@ export default function VolunteerEvents() {
 
   const declineEvent = async (historyId: string, eventId: string) => {
     try {
-      const response = await fetch(`/api/volunteerHistory/${historyId}`, {
+      const response = await fetch(`/api/volunteerHistory?id=${historyId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelled' }),
@@ -118,11 +169,51 @@ export default function VolunteerEvents() {
         throw new Error('Failed to decline event');
       }
 
-      // Remove from local state
-      setEvents(prev => prev.filter(e => e.id !== eventId));
+      // Update local state to show cancelled status
+      setEvents(prev => prev.map(e => (e.id === eventId ? { ...e, status: "cancelled" } : e)));
     } catch (err) {
       console.error("Failed to decline event:", err);
       alert("Failed to decline event. Please try again.");
+    }
+  };
+
+  const cancelEvent = async (historyId: string, eventId: string) => {
+    try {
+      const response = await fetch(`/api/volunteerHistory?id=${historyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel event');
+      }
+
+      // Update local state to show cancelled status
+      setEvents(prev => prev.map(e => (e.id === eventId ? { ...e, status: "cancelled" } : e)));
+    } catch (err) {
+      console.error("Failed to cancel event:", err);
+      alert("Failed to cancel event. Please try again.");
+    }
+  };
+
+  const reSignUpForEvent = async (historyId: string, eventId: string) => {
+    try {
+      const response = await fetch(`/api/volunteerHistory?id=${historyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'pending' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to re-sign up for event');
+      }
+
+      // Update local state to show pending status
+      setEvents(prev => prev.map(e => (e.id === eventId ? { ...e, status: "pending" } : e)));
+    } catch (err) {
+      console.error("Failed to re-sign up for event:", err);
+      alert("Failed to re-sign up for event. Please try again.");
     }
   };
 
@@ -182,7 +273,7 @@ export default function VolunteerEvents() {
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold text-slate-100 mb-2">Events</h1>
-      <p className="text-slate-300 mb-6">These are your assigned events. Confirm or decline as needed based on your availability.</p>
+      <p className="text-slate-300 mb-6">Browse all available events. Sign up for events you're interested in, then confirm or decline based on your availability.</p>
 
       <div className="space-y-4">
         {events.length === 0 ? (
@@ -207,11 +298,25 @@ export default function VolunteerEvents() {
 
                   <div className="ml-auto flex items-center gap-3">
                     {e.status === "confirmed" ? (
-                      <span className="px-2 py-1 rounded-full text-xs border bg-blue-600/20 border-blue-400 text-blue-200">
-                        Confirmed
-                      </span>
-                    ) : (
                       <>
+                        <span className="px-2 py-1 rounded-full text-xs border bg-blue-600/20 border-blue-400 text-blue-200">
+                          Confirmed
+                        </span>
+                        <button
+                          onClick={() => cancelEvent(e.historyId, e.id)}
+                          title="Cancel Registration"
+                          aria-label="Cancel Registration"
+                          className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors inline-flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
+                      </>
+                    ) : e.status === "pending" && e.historyId ? (
+                      <>
+                        <span className="px-2 py-1 rounded-full text-xs border bg-amber-600/20 border-amber-400 text-amber-200">
+                          Pending
+                        </span>
                         <button
                           onClick={() => confirmEvent(e.historyId, e.id)}
                           title="Confirm"
@@ -229,6 +334,48 @@ export default function VolunteerEvents() {
                         >
                           <X className="w-4 h-4" />
                           Decline
+                        </button>
+                      </>
+                    ) : e.status === "cancelled" && e.historyId ? (
+                      <>
+                        <button
+                          onClick={() => reSignUpForEvent(e.historyId, e.id)}
+                          title="Sign Up Again as Pending"
+                          aria-label="Sign Up Again as Pending"
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/20 border border-amber-500 text-amber-300 hover:bg-amber-600/30 text-sm font-medium transition-colors inline-flex items-center gap-1"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Pending
+                        </button>
+                        <button
+                          onClick={() => signUpForEvent(e.id, 'confirmed')}
+                          title="Confirm Registration"
+                          aria-label="Confirm Registration"
+                          className="px-3 py-1.5 rounded-lg bg-green-600/20 border border-green-500 text-green-300 hover:bg-green-600/30 text-sm font-medium transition-colors inline-flex items-center gap-1"
+                        >
+                          <Check className="w-4 h-4" />
+                          Confirm
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => signUpForEvent(e.id, 'pending')}
+                          title="Mark as Pending"
+                          aria-label="Mark as Pending"
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/20 border border-amber-500 text-amber-300 hover:bg-amber-600/30 text-sm font-medium transition-colors inline-flex items-center gap-1"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Pending
+                        </button>
+                        <button
+                          onClick={() => signUpForEvent(e.id, 'confirmed')}
+                          title="Confirm Registration"
+                          aria-label="Confirm Registration"
+                          className="px-3 py-1.5 rounded-lg bg-green-600/20 border border-green-500 text-green-300 hover:bg-green-600/30 text-sm font-medium transition-colors inline-flex items-center gap-1"
+                        >
+                          <Check className="w-4 h-4" />
+                          Confirm
                         </button>
                       </>
                     )}
