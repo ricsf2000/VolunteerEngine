@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState, ChangeEvent, FormEvent } f
  * EventItem describes event object used by this component
  */
 type EventItem = {
-  id: number;
+  id: string;
   fullName: string;
   eventName: string;
   description: string;
@@ -14,7 +14,7 @@ type EventItem = {
   urgency: string;
   eventDate: string;
   eventTime: string;
-  volunteers: Array<{ id: number; name: string; status: "confirmed" | "pending" }>;
+  volunteers: Array<{ id: string; name: string; status: "confirmed" | "pending" }>;
   maxVolunteers: number;
 };
 
@@ -133,7 +133,7 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 
 			// If editing, include the event ID in the payload
 			if (editingEvent) {
-				payload.id = editingEvent.id.toString();
+				payload.id = editingEvent.id;
 			}
 
 			// Call backend API - use PUT for updates, POST for new events
@@ -310,9 +310,10 @@ export default function NewEventModal({ open, onClose, editingEvent }: NewEventM
 							className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-slate-100 outline-none focus:border-cyan-600"
 						>
 							<option value="">Select urgency</option>
-							<option value="Low">Low</option>
-							<option value="Medium">Medium</option>
-							<option value="High">High</option>
+							<option value="low">Low</option>
+							<option value="medium">Medium</option>
+							<option value="high">High</option>
+							<option value="urgent">Urgent</option>
 						</select>
 						{errors.urgency && <div className="mt-1 text-sm text-rose-400">{errors.urgency}</div>}
 					</div>

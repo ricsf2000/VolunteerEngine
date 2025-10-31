@@ -5,7 +5,7 @@ import { getUserProfileByUserId } from '@/app/lib/dal/userProfile';
 import VolunteerHistoryClient from './VolunteerHistoryClient';
 
 type VolunteerHistoryWithEvent = {
-  id: number;
+  id: string;
   fullName: string;
   eventName: string;
   eventDescription: string;
@@ -30,7 +30,7 @@ async function getVolunteerHistoriesWithEvents(): Promise<VolunteerHistoryWithEv
     
     if (event) {
       historiesWithEvents.push({
-        id: parseInt(history.id),
+        id: history.id,
         fullName: userProfile?.fullName || "Unknown User",
         eventName: event.eventName,
         eventDescription: event.description,

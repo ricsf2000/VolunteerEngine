@@ -1,4 +1,4 @@
-import { GET, POST } from '@/app/api/volunteerHistory/route';
+import { GET, POST, PUT } from '@/app/api/volunteerHistory/route';
 import * as volunteerHistoryActions from '@/app/lib/services/volunteerHistoryActions';
 import { NextRequest } from 'next/server';
 
@@ -11,6 +11,7 @@ jest.mock('@/app/lib/services/volunteerHistoryActions');
 
 const mockGetHistory = volunteerHistoryActions.getHistory as jest.MockedFunction<any>;
 const mockCreateHistoryEntry = volunteerHistoryActions.createHistoryEntry as jest.MockedFunction<any>;
+const mockUpdateHistoryStatus = volunteerHistoryActions.updateHistoryStatus as jest.MockedFunction<any>;
 
 describe('/api/volunteerHistory', () => {
   beforeEach(() => {
@@ -319,6 +320,145 @@ describe('/api/volunteerHistory', () => {
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.error).toBe('Unauthorized to create history for other users');
+    });
+  });
+
+  describe('PUT /api/volunteerHistory', () => {
+    it('should update history status successfully', async () => {
+      const mockUpdatedHistory = {
+        id: '1',
+        userId: 'user-123',
+        eventId: 'event-456',
+        participantStatus: 'confirmed',
+        registrationDate: '2024-12-15T00:00:00.000Z',
+        createdAt: '2025-10-17T22:59:22.948Z',
+        updatedAt: '2025-10-17T22:59:22.948Z'
+      };
+
+      mockUpdateHistoryStatus.mockResolvedValue({ success: true, data: mockUpdatedHistory });
+
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=1', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toEqual(mockUpdatedHistory);
+      expect(mockUpdateHistoryStatus).toHaveBeenCalledWith('1', 'confirmed');
+    });
+
+    it('should return 400 when id is missing', async () => {
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('History ID is required in query parameter');
+      expect(mockUpdateHistoryStatus).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when status is missing', async () => {
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=1', {
+        method: 'PUT',
+        body: JSON.stringify({})
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Status is required in request body');
+      expect(mockUpdateHistoryStatus).not.toHaveBeenCalled();
+    });
+
+    it('should return 401 for unauthenticated users', async () => {
+      mockUpdateHistoryStatus.mockResolvedValue({ success: false, error: 'Not authenticated' });
+
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=1', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body.error).toBe('Not authenticated');
+    });
+
+    it('should return 404 when history entry not found', async () => {
+      mockUpdateHistoryStatus.mockResolvedValue({ success: false, error: 'History entry not found' });
+
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=999', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(404);
+      const body = await response.json();
+      expect(body.error).toBe('History entry not found');
+    });
+
+    it('should return 400 for other errors', async () => {
+      mockUpdateHistoryStatus.mockResolvedValue({ success: false, error: 'Invalid status value' });
+
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=1', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'invalid' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid status value');
+    });
+
+    it('should handle service errors with 500 status', async () => {
+      mockUpdateHistoryStatus.mockRejectedValue(new Error('Database error'));
+
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=1', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Failed to update volunteer history');
+    });
+
+    it('should return correct content type', async () => {
+      const mockUpdatedHistory = {
+        id: '1',
+        userId: 'user-123',
+        eventId: 'event-456',
+        participantStatus: 'confirmed',
+        registrationDate: '2024-12-15T00:00:00.000Z',
+        createdAt: '2025-10-17T22:59:22.948Z',
+        updatedAt: '2025-10-17T22:59:22.948Z'
+      };
+
+      mockUpdateHistoryStatus.mockResolvedValue({ success: true, data: mockUpdatedHistory });
+
+      const request = new NextRequest('http://localhost:3000/api/volunteerHistory?id=1', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+
+      const response = await PUT(request);
+
+      expect(response.headers.get('content-type')).toContain('application/json');
     });
   });
 });

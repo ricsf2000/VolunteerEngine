@@ -5,13 +5,13 @@ import NewEventModal from "@/components/event";
 
 
 type Volunteer = {
-  id: number;
+  id: string;
   name: string;
   status: "confirmed" | "pending";
 };
 
 type EventItem = {
-  id: number;
+  id: string;
   fullName: string;
   eventName: string;
   description: string;
@@ -41,7 +41,7 @@ const getEvents = async (): Promise<EventItem[]> => {
   // Note: Backend may not have all fields (volunteers, fullName, eventTime)
   // You'll need to adjust this mapping based on your actual backend structure
   return data.map((event: any) => ({
-    id: parseInt(event.id) || 0,
+    id: event.id, // Keep UUID as string
     fullName: event.createdBy || "Unknown",
     eventName: event.eventName,
     description: event.description,
@@ -61,7 +61,7 @@ export default function AdminEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
-  const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
   // Fetch events from backend API
   const fetchEvents = async () => {
@@ -79,7 +79,7 @@ export default function AdminEvents() {
   };
 
   // Delete event function
-  const handleDeleteEvent = async (eventId: number, eventName: string) => {
+  const handleDeleteEvent = async (eventId: string, eventName: string) => {
     if (!confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
       return;
     }
@@ -89,7 +89,7 @@ export default function AdminEvents() {
       const response = await fetch('/api/events', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: eventId.toString() }),
+        body: JSON.stringify({ id: eventId }),
       });
 
       if (!response.ok) {

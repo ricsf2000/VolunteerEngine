@@ -1,14 +1,45 @@
 'use server';
 
 import { getAllEvents, getEventById, createEvent, updateEvent, deleteEvent } from '@/app/lib/dal/eventDetails';
+import { prisma } from '@/app/lib/db';
 
 /**
- * Get all events
+ * Get all events with volunteer information
  */
 export async function getEvents() {
   try {
     const events = await getAllEvents();
-    return { success: true, data: events };
+
+    // Fetch volunteers for each event
+    const eventsWithVolunteers = await Promise.all(
+      events.map(async (event) => {
+        // Get volunteer history for this event
+        const volunteerHistory = await prisma.volunteerHistory.findMany({
+          where: { eventId: event.id },
+          include: {
+            user: {
+              include: {
+                profile: true
+              }
+            }
+          }
+        });
+
+        // Transform to volunteers array
+        const volunteers = volunteerHistory.map(vh => ({
+          id: vh.userId,
+          name: vh.user.profile?.fullName || vh.user.email,
+          status: vh.participantStatus === 'confirmed' ? 'confirmed' as const : 'pending' as const
+        }));
+
+        return {
+          ...event,
+          volunteers
+        };
+      })
+    );
+
+    return { success: true, data: eventsWithVolunteers };
   } catch (error) {
     console.error('Error fetching events:', error);
     return { success: false, error: 'Failed to fetch events' };

@@ -1,3 +1,6 @@
+import { prisma } from '@/app/lib/db';
+import type { EventDetails as PrismaEventDetails, EventUrgency } from '@/generated/prisma';
+
 export interface EventDetails {
   id: string;
   eventName: string;
@@ -13,75 +16,98 @@ export interface EventDetails {
 export type CreateEventDetailsInput = Omit<EventDetails, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateEventDetailsInput = Partial<Omit<EventDetails, 'id' | 'createdAt' | 'updatedAt'>>;
 
-// Hardcoded events - replace with Prisma queries later
-const eventDetails: EventDetails[] = [
-  {
-    id: '1',
-    eventName: 'Community Food Drive',
-    description: 'Help organize and distribute food to families in need during the holiday season.',
-    location: 'Houston Community Center, 456 Oak St, Houston, TX 77002',
-    requiredSkills: ['Food Service', 'Administrative Support'],
-    urgency: 'high',
-    eventDate: new Date('2024-12-15T09:00:00'),
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-  {
-    id: '2',
-    eventName: 'Youth Mentoring Workshop',
-    description: 'Mentor local youth in educational activities and life skills development.',
-    location: 'Lincoln High School, 789 Pine Ave, Houston, TX 77003',
-    requiredSkills: ['Youth Mentoring', 'Teaching/Training'],
-    urgency: 'medium',
-    eventDate: new Date('2024-12-20T14:00:00'),
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-];
+/**
+ * Helper function to convert Prisma EventDetails to our EventDetails interface
+ */
+function toEventDetails(event: PrismaEventDetails): EventDetails {
+  return {
+    id: event.id,
+    eventName: event.eventName,
+    description: event.description,
+    location: event.location,
+    requiredSkills: event.requiredSkills as string[],
+    urgency: event.urgency as 'low' | 'medium' | 'high' | 'urgent',
+    eventDate: event.eventDate,
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
+  };
+}
 
 export async function getEventById(id: string): Promise<EventDetails | null> {
-  const event = eventDetails.find(e => e.id === id);
-  return event || null;
+  try {
+    const event = await prisma.eventDetails.findUnique({
+      where: { id },
+    });
+
+    if (!event) return null;
+    return toEventDetails(event);
+  } catch {
+    return null;
+  }
 }
 
 export async function getAllEvents(): Promise<EventDetails[]> {
-  return [...eventDetails];
+  try {
+    const events = await prisma.eventDetails.findMany({
+      orderBy: {
+        eventDate: 'desc',
+      },
+    });
+
+    return events.map(toEventDetails);
+  } catch {
+    return [];
+  }
 }
 
 export async function createEvent(input: CreateEventDetailsInput): Promise<EventDetails> {
-  
-  const newEvent: EventDetails = {
-    id: (eventDetails.length + 1).toString(),
-    ...input,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+  try {
+    const event = await prisma.eventDetails.create({
+      data: {
+        eventName: input.eventName,
+        description: input.description,
+        location: input.location,
+        requiredSkills: input.requiredSkills,
+        urgency: input.urgency as EventUrgency,
+        eventDate: input.eventDate,
+      },
+    });
 
-  eventDetails.push(newEvent);
-  
-  return newEvent;
+    return toEventDetails(event);
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function updateEvent(id: string, input: UpdateEventDetailsInput): Promise<EventDetails | null> {
+  try {
+    const event = await prisma.eventDetails.update({
+      where: { id },
+      data: {
+        ...(input.eventName !== undefined && { eventName: input.eventName }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.location !== undefined && { location: input.location }),
+        ...(input.requiredSkills !== undefined && { requiredSkills: input.requiredSkills }),
+        ...(input.urgency !== undefined && { urgency: input.urgency as EventUrgency }),
+        ...(input.eventDate !== undefined && { eventDate: input.eventDate }),
+      },
+    });
 
-  const eventIndex = eventDetails.findIndex(e => e.id === id);
-  if (eventIndex === -1) return null;
-
-  const event = eventDetails[eventIndex];
-
-  eventDetails[eventIndex] = {
-    ...event,
-    ...input,
-    updatedAt: new Date(),
-  };
-
-  return eventDetails[eventIndex];
+    return toEventDetails(event);
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
-  const eventIndex = eventDetails.findIndex(e => e.id === id);
-  if (eventIndex === -1) return false;
+  try {
+    await prisma.eventDetails.delete({
+      where: { id },
+    });
 
-  eventDetails.splice(eventIndex, 1);
-  return true;
+    return true;
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    return false;
+  }
 }
