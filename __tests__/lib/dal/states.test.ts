@@ -7,6 +7,7 @@ import {
   getAllStates,
   getStateByCode,
 } from '@/app/lib/dal/states';
+import { prisma } from '@/app/lib/db';
 
 describe('states DAL', () => {
   describe('getAllStates', () => {
@@ -17,6 +18,14 @@ describe('states DAL', () => {
       expect(states.length).toBe(50);
       expect(states[0]).toHaveProperty('code');
       expect(states[0]).toHaveProperty('name');
+    });
+
+    it('should return empty array on database error', async () => {
+      jest.spyOn(prisma.state, 'findMany').mockRejectedValueOnce(new Error('Database error'));
+      
+      const states = await getAllStates();
+      
+      expect(states).toEqual([]);
     });
   });
 
@@ -38,6 +47,14 @@ describe('states DAL', () => {
     it('should be case sensitive', async () => {
       const state = await getStateByCode('tx');
 
+      expect(state).toBeNull();
+    });
+
+    it('should return null on database error', async () => {
+      jest.spyOn(prisma.state, 'findUnique').mockRejectedValueOnce(new Error('Database error'));
+      
+      const state = await getStateByCode('TX');
+      
       expect(state).toBeNull();
     });
   });

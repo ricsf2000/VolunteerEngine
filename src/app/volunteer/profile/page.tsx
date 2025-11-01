@@ -402,7 +402,7 @@ export default function VolunteerProfile() {
                         key={date}
                         className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-green-800 "
                       >
-                        {new Date(date).toLocaleDateString()}
+                        {new Date(date + 'T00:00:00').toLocaleDateString()}
                         <button
                           type="button"
                           onClick={() => removeAvailabilityDate(date)}

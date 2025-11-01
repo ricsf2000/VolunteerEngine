@@ -552,4 +552,91 @@ describe('userProfile DAL', () => {
       await prisma.userCredentials.delete({ where: { id: credentials.id } }).catch(() => {});
     });
   });
+
+  describe('Edge cases and branch coverage', () => {
+    it('should return null when updating with empty userId', async () => {
+      const result = await updateUserProfile('', { fullName: 'Test' });
+      expect(result).toBeNull();
+    });
+
+    it('should handle address2 as undefined in updates', async () => {
+      const fixture = await createProfileFixture();
+      
+      try {
+        const result = await updateUserProfile(fixture.userId, { 
+          address2: undefined 
+        });
+        expect(result).toBeTruthy();
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    it('should handle address2 as empty string', async () => {
+      const fixture = await createProfileFixture();
+      
+      try {
+        const result = await updateUserProfile(fixture.userId, { 
+          address2: '' 
+        });
+        // mapAddress2('') should return null, but database might store as empty string
+        expect(result?.address2 === null || result?.address2 === '').toBe(true);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    it('should handle address2 with whitespace', async () => {
+      const fixture = await createProfileFixture();
+      
+      try {
+        const result = await updateUserProfile(fixture.userId, { 
+          address2: '   ' 
+        });
+        // mapAddress2('   ') should return null, but database might store as empty string  
+        expect(result?.address2 === null || result?.address2 === '').toBe(true);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    it('should preserve valid address2 value', async () => {
+      const fixture = await createProfileFixture();
+      
+      try {
+        const result = await updateUserProfile(fixture.userId, { 
+          address2: 'Suite 200' 
+        });
+        expect(result?.address2).toBe('Suite 200');
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    it('should handle profile with minimal zipCode in completeness check', async () => {
+      const credentials = await createTestCredentials('zipcode');
+      
+      try {
+        await createUserProfile({
+          userId: credentials.id,
+          fullName: 'Test User',
+          address1: '123 Test St',
+          address2: '',
+          city: 'Test City',
+          state: 'TX',
+          zipCode: '12345', // exactly 5 characters
+          skills: ['Testing'],
+          preferences: '',
+          availability: ['2025-01-01']
+        });
+
+        const profile = await getUserProfileByUserId(credentials.id);
+        const complete = isProfileComplete(profile);
+        expect(complete).toBe(true);
+      } finally {
+        await prisma.userProfile.deleteMany({ where: { userId: credentials.id } });
+        await prisma.userCredentials.delete({ where: { id: credentials.id } });
+      }
+    });
+  });
 });

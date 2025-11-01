@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { getEventById } from '@/app/lib/dal/eventDetails';
 import { getUserProfileByUserId } from '@/app/lib/dal/userProfile';
 import { createVolunteerHistory, VolunteerHistory } from '@/app/lib/dal/volunteerHistory';
+import { sendNotification } from './notificationActions';
 
 type CreateAssignmentInput = { eventId: string; volunteerId: string };
 
@@ -39,11 +40,28 @@ export async function createAssignment({ eventId, volunteerId }: CreateAssignmen
     const created = await createVolunteerHistory({
       userId: volunteerId,
       eventId: eventId,
-      participantStatus: 'confirmed',
+      participantStatus: 'pending',
       registrationDate: now,
     });
 
-    // TODO: notification integration (out of scope for Matching module)
+    try {
+      await sendNotification(
+        volunteerId,
+        'volunteer',
+        'assignment',
+        'New Event Assignment',
+        `You have been matched to "${event.eventName}" scheduled for ${event.eventDate.toLocaleDateString()}. Please review and accept or decline this assignment.`,
+        {
+          eventId: event.id,
+          eventName: event.eventName,
+          date: event.eventDate.toISOString(),
+          location: event.location,
+          urgency: event.urgency
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send notification:', notificationError);
+    }
 
     return { ok: true, status: 201, data: created };
   } catch (err) {

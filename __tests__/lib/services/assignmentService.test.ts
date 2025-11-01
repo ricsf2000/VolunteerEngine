@@ -93,7 +93,7 @@ describe('assignmentService.createAssignment', () => {
       id: 'vh-1',
       userId: 'vol-1',
       eventId: 'event-1',
-      participantStatus: 'confirmed',
+      participantStatus: 'pending',
       registrationDate: new Date()
     };
     mockCreateVolunteerHistory.mockResolvedValue(created);
@@ -103,7 +103,7 @@ describe('assignmentService.createAssignment', () => {
     expect(mockCreateVolunteerHistory).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'vol-1',
       eventId: 'event-1',
-      participantStatus: 'confirmed',
+      participantStatus: 'pending',
       registrationDate: expect.any(Date)
     }));
     expect(res).toEqual({ ok: true, status: 201, data: created });

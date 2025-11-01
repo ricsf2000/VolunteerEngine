@@ -68,3 +68,15 @@ export async function updateUserPassword(userId: string, newPassword: string): P
     return null;
   }
 }
+
+export async function getUsersByRole(role: UserRole): Promise<UserCredentials[]> {
+  try {
+    const users = await prisma.userCredentials.findMany({
+      where: { role },
+    });
+    return users;
+  } catch (error) {
+    console.error('Error fetching users by role:', error);
+    return [];
+  }
+}
