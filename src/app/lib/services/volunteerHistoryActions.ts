@@ -3,6 +3,9 @@
 import { auth } from '@/auth';
 import * as volunteerHistoryDAL from '../dal/volunteerHistory';
 import { getEventById } from '../dal/eventDetails';
+import { getUserProfileByUserId } from '../dal/userProfile';
+import { getUsersByRole } from '../dal/userCredentials';
+import { sendNotification } from './notificationActions';
 import type { CreateVolunteerHistoryInput,VolunteerHistory } from '../dal/volunteerHistory';
 
 /**
@@ -232,6 +235,39 @@ export async function updateHistoryStatus(
 
     if (!updated) {
       return { success: false, error: 'History entry not found' };
+    }
+
+    try {
+      if (status === 'confirmed' || status === 'cancelled') {
+        const event = await getEventById(updated.eventId);
+        const volunteer = await getUserProfileByUserId(updated.userId);
+        const admins = await getUsersByRole('admin');
+        
+        if (event && volunteer && admins.length > 0) {
+          const actionText = status === 'confirmed' ? 'accepted' : 'declined';
+          const title = `Volunteer ${actionText === 'accepted' ? 'Accepted' : 'Declined'} Assignment`;
+          const message = `${volunteer.fullName} has ${actionText} the assignment for "${event.eventName}" scheduled for ${event.eventDate.toLocaleDateString()}.`;
+          
+          for (const admin of admins) {
+            await sendNotification(
+              admin.id,
+              'admin',
+              'update',
+              title,
+              message,
+              {
+                eventId: event.id,
+                eventName: event.eventName,
+                date: event.eventDate.toISOString(),
+                location: event.location,
+                volunteerAction: actionText
+              }
+            );
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to send notification:', notificationError);
     }
 
     return { success: true, data: updated };

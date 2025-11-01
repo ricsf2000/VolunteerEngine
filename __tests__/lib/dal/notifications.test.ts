@@ -234,6 +234,14 @@ describe('Notifications DAL', () => {
       expect(result).toEqual([]);
     });
 
+    it('should return empty array on database error', async () => {
+      jest.spyOn(prisma.notificationData, 'findMany').mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await getNotificationsByUserRole('volunteer');
+      
+      expect(result).toEqual([]);
+    });
+
     it('should handle notifications with eventInfo, volunteerInfo, and matchStats', async () => {
       await createNotification({
         userId: adminId,
@@ -303,6 +311,14 @@ describe('Notifications DAL', () => {
     it('should return empty array on error', async () => {
       const result = await getNotificationsByUserId('');
 
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array on database error', async () => {
+      jest.spyOn(prisma.notificationData, 'findMany').mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await getNotificationsByUserId('test-user-id');
+      
       expect(result).toEqual([]);
     });
 
@@ -388,6 +404,14 @@ describe('Notifications DAL', () => {
     it('should return null for non-existent notification', async () => {
       const result = await updateNotificationReadStatus(999999, true);
 
+      expect(result).toBeNull();
+    });
+
+    it('should return null on database error', async () => {
+      jest.spyOn(prisma.notificationData, 'update').mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await updateNotificationReadStatus(1, true);
+      
       expect(result).toBeNull();
     });
 
@@ -477,6 +501,14 @@ describe('Notifications DAL', () => {
 
       expect(count).toBe(0);
     });
+
+    it('should return 0 on database error', async () => {
+      jest.spyOn(prisma.notificationData, 'updateMany').mockRejectedValueOnce(new Error('Database error'));
+      
+      const count = await markAllNotificationsAsRead('test-user-id');
+      
+      expect(count).toBe(0);
+    });
   });
 
   describe('deleteNotification', () => {
@@ -506,6 +538,14 @@ describe('Notifications DAL', () => {
     it('should return false for non-existent notification', async () => {
       const result = await deleteNotification(999999);
 
+      expect(result).toBe(false);
+    });
+
+    it('should return false on database error', async () => {
+      jest.spyOn(prisma.notificationData, 'delete').mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await deleteNotification(1);
+      
       expect(result).toBe(false);
     });
   });

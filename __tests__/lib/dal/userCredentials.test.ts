@@ -2,8 +2,10 @@ import {
   getUserCredentialsByEmailAndRole,
   createUserCredentials,
   updateUserPassword,
+  getUsersByRole,
   CreateUserCredentialsInput
 } from '@/app/lib/dal/userCredentials';
+import { prisma } from '@/app/lib/db';
 
 describe('userCredentials DAL', () => {
 
@@ -44,6 +46,14 @@ describe('userCredentials DAL', () => {
       expect(credentials).toBeNull();
     });
 
+    it('should return null on database error', async () => {
+      jest.spyOn(prisma.userCredentials, 'findFirst').mockRejectedValueOnce(new Error('Database error'));
+      
+      const credentials = await getUserCredentialsByEmailAndRole('test@test.com', 'admin');
+      
+      expect(credentials).toBeNull();
+    });
+
     it('should be case sensitive for email', async () => {
       const credentials = await getUserCredentialsByEmailAndRole('ADMIN@test.com', 'admin');
 
@@ -79,6 +89,19 @@ describe('userCredentials DAL', () => {
 
       await expect(createUserCredentials(existingUserInput))
         .rejects.toThrow('User with this email already exists');
+    });
+
+    it('should throw error on database error during creation', async () => {
+      jest.spyOn(prisma.userCredentials, 'create').mockRejectedValueOnce(new Error('Database error'));
+      
+      const input: CreateUserCredentialsInput = {
+        email: 'error-test@test.com',
+        password: 'password',
+        role: 'volunteer'
+      };
+
+      await expect(createUserCredentials(input))
+        .rejects.toThrow('Failed to create user credentials');
     });
 
     it('should create user with admin role', async () => {
@@ -158,6 +181,14 @@ describe('userCredentials DAL', () => {
     it('should return null for non-existent user', async () => {
       const result = await updateUserPassword('non-existent-id', 'new-password');
 
+      expect(result).toBeNull();
+    });
+
+    it('should return null on database error', async () => {
+      jest.spyOn(prisma.userCredentials, 'update').mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await updateUserPassword('test-id', 'new-password');
+      
       expect(result).toBeNull();
     });
 
@@ -249,6 +280,34 @@ describe('userCredentials DAL', () => {
       expect(credentials.email).toBe('user@tëst.com');
       expect(credentials.password).toMatch(/^\$2b\$10\$/);
       expect(credentials.password).not.toBe(unicodeInput.password);
+    });
+  });
+
+  describe('getUsersByRole', () => {
+    it('should return users with admin role', async () => {
+      const adminUsers = await getUsersByRole('admin');
+      
+      expect(Array.isArray(adminUsers)).toBe(true);
+      adminUsers.forEach(user => {
+        expect(user.role).toBe('admin');
+      });
+    });
+
+    it('should return users with volunteer role', async () => {
+      const volunteerUsers = await getUsersByRole('volunteer');
+      
+      expect(Array.isArray(volunteerUsers)).toBe(true);
+      volunteerUsers.forEach(user => {
+        expect(user.role).toBe('volunteer');
+      });
+    });
+
+    it('should return empty array on database error', async () => {
+      jest.spyOn(prisma.userCredentials, 'findMany').mockRejectedValueOnce(new Error('Database error'));
+      
+      const users = await getUsersByRole('admin');
+      
+      expect(users).toEqual([]);
     });
   });
 });

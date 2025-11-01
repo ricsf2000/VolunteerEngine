@@ -181,4 +181,42 @@ describe('eventDetails DAL', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('Error handling', () => {
+    it('should return null when getEventById encounters database error', async () => {
+      const spy = jest.spyOn(require('@/app/lib/db').prisma.eventDetails, 'findUnique')
+        .mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await getEventById('test-id');
+      
+      expect(result).toBeNull();
+      spy.mockRestore();
+    });
+
+    it('should return empty array when getAllEvents encounters database error', async () => {
+      const spy = jest.spyOn(require('@/app/lib/db').prisma.eventDetails, 'findMany')
+        .mockRejectedValueOnce(new Error('Database error'));
+      
+      const result = await getAllEvents();
+      
+      expect(result).toEqual([]);
+      spy.mockRestore();
+    });
+
+    it('should throw error when createEvent encounters database error', async () => {
+      const spy = jest.spyOn(require('@/app/lib/db').prisma.eventDetails, 'create')
+        .mockRejectedValueOnce(new Error('Database error'));
+      
+      await expect(createEvent({
+        eventName: 'Test Event',
+        description: 'Test Description',
+        location: 'Test Location',
+        requiredSkills: ['Testing'],
+        urgency: 'medium',
+        eventDate: new Date('2025-12-25T10:00:00')
+      })).rejects.toThrow('Database error');
+      
+      spy.mockRestore();
+    });
+  });
 });

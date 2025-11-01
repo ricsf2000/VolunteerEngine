@@ -96,54 +96,90 @@ async function main() {
     },
   });
 
+  const vol3 = await prisma.userCredentials.create({
+    data: {
+      email: "bob@example.com",
+      password: hash("Volunteer123!"),
+      role: "volunteer",
+    },
+  });
+
+  const vol4 = await prisma.userCredentials.create({
+    data: {
+      email: "sarah@example.com",
+      password: hash("Volunteer123!"),
+      role: "volunteer",
+    },
+  });
+
   // --- Profiles ---
   await prisma.userProfile.createMany({
     data: [
       {
-        userId: admin.id,
-        fullName: "Site Administrator",
-        address1: "100 Admin Way",
-        city: "Houston",
-        state: "TX",
-        zipCode: "77002",
-        skills: ["coordination", "scheduling"],
-        preferences: "Prefers weekday morning shifts; remote-friendly.",
-        availability: [
-          "2025-10-27",
-          "2025-10-28",
-          "2025-11-03",
-        ],
-      },
-      {
         userId: vol1.id,
-        fullName: "Alice Johnson",
-        address1: "123 Main St",
+        fullName: "Volunteer Test User",
+        address1: "123 Main Street",
         city: "Houston",
         state: "TX",
         zipCode: "77004",
-        skills: ["logistics", "food-handling", "spanish"],
-        preferences:
-          "Enjoys check-in desk or packing. Avoids heavy lifting (>30 lb).",
+        skills: ["Food Service", "Event Planning", "Languages (Bilingual)", "Administrative Support"],
+        preferences: "Available weekends and evenings. Enjoys working with people and organizing events. Has experience in food service and bilingual communication.",
         availability: [
-          "2025-10-30",
           "2025-11-02",
+          "2025-11-03",
           "2025-11-09",
+          "2025-11-10",
+          "2025-11-16",
+          "2025-11-17",
         ],
       },
       {
         userId: vol2.id,
-        fullName: "Bob Martinez",
-        address1: "456 Oak Ave",
+        fullName: "Alice Johnson",
+        address1: "456 Oak Avenue",
         address2: "Apt 5",
         city: "Sugar Land",
         state: "TX",
         zipCode: "77479",
-        skills: ["first-aid", "forklift", "warehouse"],
-        preferences: "Evenings and weekends; can do loading bay.",
+        skills: ["Healthcare", "Senior Care", "Teaching/Training"],
+        preferences: "Prefers healthcare and education related volunteer work. Available weekday evenings and has experience working with elderly populations.",
         availability: [
-          "2025-10-31",
-          "2025-11-01",
+          "2025-11-04",
+          "2025-11-05",
+          "2025-11-11",
+          "2025-11-12",
+        ],
+      },
+      {
+        userId: vol3.id,
+        fullName: "Bob Martinez",
+        address1: "789 Pine Street",
+        city: "Katy",
+        state: "TX",
+        zipCode: "77494",
+        skills: ["Construction/Manual Labor", "Transportation", "Sports/Recreation"],
+        preferences: "Available for physical work and outdoor activities. Prefers weekend shifts and has truck for transportation needs.",
+        availability: [
           "2025-11-08",
+          "2025-11-09",
+          "2025-11-15",
+          "2025-11-16",
+        ],
+      },
+      {
+        userId: vol4.id,
+        fullName: "Sarah Chen",
+        address1: "321 Elm Drive",
+        city: "The Woodlands",
+        state: "TX",
+        zipCode: "77381",
+        skills: ["Technology Support", "Photography/Videography", "Marketing/Communications"],
+        preferences: "Specializes in digital media and technology support. Available weekday evenings and can help with online promotion and documentation.",
+        availability: [
+          "2025-11-06",
+          "2025-11-07",
+          "2025-11-13",
+          "2025-11-14",
         ],
       },
     ],
@@ -151,125 +187,220 @@ async function main() {
   });
 
   // --- Events ---
-  const now = new Date();
-  const next = (days: number) =>
-    new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-
-  const eventFoodDrive = await prisma.eventDetails.create({
+  const eventHolidayDinner = await prisma.eventDetails.create({
     data: {
-      eventName: "Weekend Food Drive",
-      description:
-        "Sort donations, assemble food boxes, and help with distribution.",
-      location: "Houston Food Bank Warehouse",
-      requiredSkills: ["logistics", "food-handling"],
+      eventName: "Community Holiday Dinner",
+      description: "Help prepare and serve holiday meals to families in need. Tasks include food preparation, serving, setup, and cleanup. Bilingual volunteers especially needed for guest interaction.",
+      location: "Houston Community Center - 1234 Main Street",
+      requiredSkills: ["Food Service", "Languages (Bilingual)", "Event Planning"],
       urgency: "medium",
-      eventDate: next(5),
+      eventDate: new Date("2025-11-15T16:00:00Z"),
     },
   });
 
-  const eventShelter = await prisma.eventDetails.create({
+  const eventSeniorCare = await prisma.eventDetails.create({
     data: {
-      eventName: "Emergency Shelter Setup",
-      description:
-        "Set up cots and supplies at temporary shelter. Some lifting required.",
-      location: "Downtown Community Center",
-      requiredSkills: ["warehouse", "coordination"],
-      urgency: "high",
-      eventDate: next(2),
-    },
-  });
-
-  const eventParkClean = await prisma.eventDetails.create({
-    data: {
-      eventName: "City Park Cleanup",
-      description:
-        "Trash pickup, light landscaping, and recycling sorting in the park.",
-      location: "Buffalo Bayou Park",
-      requiredSkills: ["outdoors", "coordination"],
+      eventName: "Senior Center Technology Workshop",
+      description: "Teach elderly residents how to use tablets and smartphones for video calls with family. Help with basic internet navigation and social media setup.",
+      location: "Sunset Senior Living - 567 Oak Avenue",
+      requiredSkills: ["Technology Support", "Teaching/Training", "Senior Care"],
       urgency: "low",
-      eventDate: next(9),
+      eventDate: new Date("2025-11-08T14:00:00Z"),
+    },
+  });
+
+  const eventDisasterResponse = await prisma.eventDetails.create({
+    data: {
+      eventName: "Emergency Flood Relief Setup",
+      description: "URGENT: Set up emergency shelter and distribute supplies to flood victims. Heavy lifting required. Transportation volunteers needed to deliver supplies to affected areas.",
+      location: "Emergency Response Center - 890 Emergency Way",
+      requiredSkills: ["Construction/Manual Labor", "Transportation", "Administrative Support"],
+      urgency: "high",
+      eventDate: new Date("2025-11-05T08:00:00Z"),
+    },
+  });
+
+  const eventYouthMentoring = await prisma.eventDetails.create({
+    data: {
+      eventName: "Youth Career Day Planning Meeting",
+      description: "Plan and organize upcoming career day event for local high school students. Need help with event coordination, photography for promotional materials, and administrative tasks.",
+      location: "Youth Development Center - 456 Future Lane",
+      requiredSkills: ["Event Planning", "Photography/Videography", "Youth Mentoring"],
+      urgency: "medium",
+      eventDate: new Date("2025-11-12T18:00:00Z"),
+    },
+  });
+
+  const eventHealthcare = await prisma.eventDetails.create({
+    data: {
+      eventName: "Free Health Screening Event",
+      description: "Assist medical professionals with community health screening event. Help with patient check-in, basic administrative support, and crowd management.",
+      location: "Mobile Health Clinic - Various Houston Locations",
+      requiredSkills: ["Healthcare", "Administrative Support"],
+      urgency: "medium",
+      eventDate: new Date("2025-11-20T09:00:00Z"),
+    },
+  });
+
+  const eventEnvironmental = await prisma.eventDetails.create({
+    data: {
+      eventName: "Buffalo Bayou Trail Restoration",
+      description: "Join us for trail maintenance and native plant restoration along Buffalo Bayou. Physical work including planting, mulching, and trail clearing. Tools provided.",
+      location: "Buffalo Bayou Park - Sabine Street Entrance",
+      requiredSkills: ["Environmental Work", "Construction/Manual Labor"],
+      urgency: "low",
+      eventDate: new Date("2025-11-22T08:00:00Z"),
     },
   });
 
   // --- Volunteer History ---
   await prisma.volunteerHistory.createMany({
     data: [
+      // volunteer@test.com (vol1) - various states to test UI
       {
         userId: vol1.id,
-        eventId: eventFoodDrive.id,
+        eventId: eventHolidayDinner.id,
         participantStatus: "confirmed",
-        registrationDate: new Date(),
+        registrationDate: new Date("2025-10-15T10:00:00Z"),
       },
       {
-        userId: vol2.id,
-        eventId: eventShelter.id,
+        userId: vol1.id,
+        eventId: eventYouthMentoring.id,
         participantStatus: "pending",
-        registrationDate: new Date(),
+        registrationDate: new Date("2025-10-28T14:30:00Z"),
+      },
+      {
+        userId: vol1.id,
+        eventId: eventHealthcare.id,
+        participantStatus: "cancelled",
+        registrationDate: new Date("2025-10-20T09:15:00Z"),
+      },
+      
+      // Alice (vol2) - healthcare focused
+      {
+        userId: vol2.id,
+        eventId: eventSeniorCare.id,
+        participantStatus: "confirmed",
+        registrationDate: new Date("2025-10-25T16:00:00Z"),
       },
       {
         userId: vol2.id,
-        eventId: eventFoodDrive.id,
-        participantStatus: "cancelled",
-        registrationDate: new Date(),
+        eventId: eventHealthcare.id,
+        participantStatus: "confirmed",
+        registrationDate: new Date("2025-10-22T11:30:00Z"),
+      },
+      
+      // Bob (vol3) - construction/physical work
+      {
+        userId: vol3.id,
+        eventId: eventDisasterResponse.id,
+        participantStatus: "confirmed",
+        registrationDate: new Date("2025-11-01T08:00:00Z"),
+      },
+      {
+        userId: vol3.id,
+        eventId: eventEnvironmental.id,
+        participantStatus: "pending",
+        registrationDate: new Date("2025-10-30T12:00:00Z"),
+      },
+      
+      // Sarah (vol4) - tech/media focused
+      {
+        userId: vol4.id,
+        eventId: eventYouthMentoring.id,
+        participantStatus: "confirmed",
+        registrationDate: new Date("2025-10-26T19:00:00Z"),
+      },
+      {
+        userId: vol4.id,
+        eventId: eventSeniorCare.id,
+        participantStatus: "pending",
+        registrationDate: new Date("2025-10-29T15:45:00Z"),
       },
     ],
     skipDuplicates: true,
   });
 
   // --- Notifications ---
+  // Notifications for volunteer@test.com
   await prisma.notificationData.create({
     data: {
       type: "reminder",
-      title: "Upcoming Shift Reminder",
-      message:
-        "Don’t forget: Weekend Food Drive is in 5 days. Please confirm attendance.",
-      timestamp: new Date().toISOString(),
+      title: "Holiday Dinner Event Confirmed",
+      message: "Thank you for confirming your participation in the Community Holiday Dinner on November 15th. Please arrive 30 minutes early for setup.",
+      timestamp: new Date("2025-10-16T08:00:00Z").toISOString(),
       isRead: false,
       userId: vol1.id,
       userRole: "volunteer",
       eventInfo: {
-        eventId: eventFoodDrive.id,
-        name: eventFoodDrive.eventName,
-        date: eventFoodDrive.eventDate.toISOString(),
-        location: eventFoodDrive.location,
+        eventId: eventHolidayDinner.id,
+        name: eventHolidayDinner.eventName,
+        date: eventHolidayDinner.eventDate.toISOString(),
+        location: eventHolidayDinner.location,
+        address: "1234 Main Street, Houston, TX 77004",
       },
-      volunteerInfo: { userId: vol1.id, name: "Alice Johnson" },
-      matchStats: { score: 0.82, skillsMatched: ["logistics", "food-handling"] },
+      volunteerInfo: { userId: vol1.id, name: "Volunteer Test User" },
+      matchStats: { score: 0.95, skillsMatched: ["Food Service", "Event Planning", "Languages (Bilingual)"] },
     },
   });
 
   await prisma.notificationData.create({
     data: {
       type: "assignment",
-      title: "Provisional Assignment: Shelter Setup",
-      message:
-        "You have been tentatively assigned to Emergency Shelter Setup. Please confirm.",
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      userId: vol2.id,
+      title: "New Event Match: Youth Career Day",
+      message: "Based on your skills in Event Planning, you would be a great fit for the Youth Career Day Planning Meeting. Please review and confirm if interested.",
+      timestamp: new Date("2025-10-28T12:00:00Z").toISOString(),
+      isRead: true,
+      userId: vol1.id,
       userRole: "volunteer",
       eventInfo: {
-        eventId: eventShelter.id,
-        urgency: "high",
-        requiredSkills: ["warehouse", "coordination"],
+        eventId: eventYouthMentoring.id,
+        name: eventYouthMentoring.eventName,
+        urgency: "medium",
+        requiredSkills: ["Event Planning", "Photography/Videography", "Youth Mentoring"],
+        address: "456 Future Lane, Houston, TX 77002",
       },
-      volunteerInfo: { userId: vol2.id, name: "Bob Martinez" },
+      volunteerInfo: { userId: vol1.id, name: "Volunteer Test User" },
+      matchStats: { score: 0.75, skillsMatched: ["Event Planning"] },
+    },
+  });
+
+  // Notifications for admin@test.com
+  await prisma.notificationData.create({
+    data: {
+      type: "update",
+      title: "Volunteer Registration Update",
+      message: "4 new volunteer registrations received today. Emergency Flood Relief event now has sufficient volunteers.",
+      timestamp: new Date("2025-11-01T14:30:00Z").toISOString(),
+      isRead: false,
+      userId: admin.id,
+      userRole: "admin",
+      eventInfo: {
+        eventId: eventDisasterResponse.id,
+        name: eventDisasterResponse.eventName,
+        affected: ["capacity", "skill_coverage"],
+        address: "890 Emergency Way, Houston, TX 77001",
+      },
+      matchStats: { volunteersMatched: 8, eventsCount: 6, efficiency: "87%" },
     },
   });
 
   await prisma.notificationData.create({
     data: {
-      type: "update",
-      title: "Roster Update: Food Drive",
-      message:
-        "Admin updated the roster and shift windows for the Food Drive event.",
-      timestamp: new Date().toISOString(),
+      type: "reminder",
+      title: "Urgent Event Needs Attention",
+      message: "Emergency Flood Relief Setup is tomorrow and still needs 2 more volunteers with Transportation skills.",
+      timestamp: new Date("2025-11-04T09:00:00Z").toISOString(),
       isRead: false,
       userId: admin.id,
       userRole: "admin",
       eventInfo: {
-        eventId: eventFoodDrive.id,
-        affected: ["schedule", "capacity"],
+        eventId: eventDisasterResponse.id,
+        name: eventDisasterResponse.eventName,
+        urgency: "high",
+        requiredSkills: ["Transportation"],
+        needed: 2,
+        address: "890 Emergency Way, Houston, TX 77001",
       },
     },
   });
@@ -277,9 +408,9 @@ async function main() {
   // --- MatchStats (standalone analytics record) ---
   await prisma.matchStats.create({
     data: {
-      volunteersMatched: 12,
-      eventsCount: 3,
-      efficiency: "82%",
+      volunteersMatched: 15,
+      eventsCount: 6,
+      efficiency: "87%",
     },
   });
 
