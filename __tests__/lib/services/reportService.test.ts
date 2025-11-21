@@ -1,4 +1,13 @@
-import { aggregateEventDetailsAndAssignments, EventWithAssignments, VolunteerAssignment } from '@/app/lib/services/reportService';
+import {
+  aggregateEventDetailsAndAssignments,
+  generateEventReportCSV,
+  generateEventReportPDF,
+  generateVolunteerReportCSV,
+  generateVolunteerReportPDF,
+  getReportData,
+  EventWithAssignments,
+  VolunteerAssignment,
+} from '@/app/lib/services/reportService';
 import * as eventDetailsDAL from '@/app/lib/dal/eventDetails';
 import * as volunteerHistoryDAL from '@/app/lib/dal/volunteerHistory';
 
@@ -303,6 +312,110 @@ describe('reportService', () => {
       expect(statuses).toContain('confirmed');
       expect(statuses).toContain('cancelled');
       expect(statuses).toContain('no_show');
+    });
+  });
+
+  describe('getReportData', () => {
+    it('routes to event aggregation when report type is events', async () => {
+      const result = await getReportData('events');
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result!.data!.length).toBeGreaterThan(0);
+    });
+
+    it('returns an error when requesting volunteer report data', async () => {
+      const result = await getReportData('volunteers');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.data).toBeUndefined();
+    });
+  });
+
+  describe('generateEventReportCSV', () => {
+    it('creates a CSV report with the expected headers', async () => {
+      const result = await generateEventReportCSV();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data!.contentType).toBe('text/csv');
+      expect(result.data!.fileName).toBe('events-report.csv');
+
+      const csvString = result.data!.fileBuffer.toString('utf-8');
+      expect(csvString).toContain('Volunteer Assignments');
+      expect(csvString).toContain('John Doe (john.doe@example.com)');
+      expect(csvString).toContain('"Food Bank Distribution"');
+      expect(csvString).toContain('"Help clean up the local park"');
+    });
+
+    it('returns an error when aggregation fails', async () => {
+      mockGetAllEvents.mockRejectedValueOnce(new Error('db failure'));
+
+      const result = await generateEventReportCSV();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to aggregate event data');
+    });
+
+    it('adds placeholder rows when no volunteers exist', async () => {
+      mockGetAllHistory.mockResolvedValueOnce([]);
+
+      const result = await generateEventReportCSV();
+
+      expect(result.success).toBe(true);
+      const csvString = result.data!.fileBuffer.toString('utf-8');
+      expect(csvString).toContain('"No volunteers assigned"');
+      expect(csvString).toContain('"Help clean up the local park"');
+    });
+  });
+
+  describe('generateEventReportPDF', () => {
+    it('creates a PDF report buffer for events', async () => {
+      const result = await generateEventReportPDF();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data!.contentType).toBe('application/pdf');
+      expect(result.data!.fileName).toBe('events-report.pdf');
+      expect(result.data!.fileBuffer.byteLength).toBeGreaterThan(0);
+    });
+
+    it('returns graceful error when aggregation fails', async () => {
+      mockGetAllEvents.mockRejectedValueOnce(new Error('db failure'));
+
+      const result = await generateEventReportPDF();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to aggregate event data');
+    });
+
+    it('renders fallback text when no events exist', async () => {
+      mockGetAllEvents.mockResolvedValueOnce([]);
+
+      const result = await generateEventReportPDF();
+      expect(result.success).toBe(true);
+      expect(result.data?.fileBuffer.byteLength).toBeGreaterThan(0);
+    });
+
+    it('handles events with no assigned volunteers', async () => {
+      mockGetAllHistory.mockResolvedValueOnce([]);
+
+      const result = await generateEventReportPDF();
+      expect(result.success).toBe(true);
+      expect(result.data?.fileBuffer.byteLength).toBeGreaterThan(0);
+    });
+  });
+
+  describe('volunteer report generators', () => {
+    it('returns an error for volunteer PDF report generation', async () => {
+      const result = await generateVolunteerReportPDF();
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('returns an error for volunteer CSV report generation', async () => {
+      const result = await generateVolunteerReportCSV();
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
   });
 });
