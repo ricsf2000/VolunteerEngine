@@ -343,9 +343,10 @@ describe('reportService', () => {
       expect(result.data!.fileName).toBe('events-report.csv');
 
       const csvString = result.data!.fileBuffer.toString('utf-8');
-      expect(csvString).toContain('Event Name');
-      expect(csvString).toContain('Community Cleanup');
-      expect(csvString).toContain('Food Bank Distribution');
+      expect(csvString).toContain('Volunteer Assignments');
+      expect(csvString).toContain('John Doe (john.doe@example.com)');
+      expect(csvString).toContain('"Food Bank Distribution"');
+      expect(csvString).toContain('"Help clean up the local park"');
     });
 
     it('returns an error when aggregation fails', async () => {
@@ -354,6 +355,17 @@ describe('reportService', () => {
       const result = await generateEventReportCSV();
       expect(result.success).toBe(false);
       expect(result.error).toBe('Failed to aggregate event data');
+    });
+
+    it('adds placeholder rows when no volunteers exist', async () => {
+      mockGetAllHistory.mockResolvedValueOnce([]);
+
+      const result = await generateEventReportCSV();
+
+      expect(result.success).toBe(true);
+      const csvString = result.data!.fileBuffer.toString('utf-8');
+      expect(csvString).toContain('"No volunteers assigned"');
+      expect(csvString).toContain('"Help clean up the local park"');
     });
   });
 

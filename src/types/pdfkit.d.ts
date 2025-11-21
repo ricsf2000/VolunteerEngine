@@ -2,6 +2,7 @@ declare module 'pdfkit' {
   interface PDFDocumentOptions {
     size?: string | [number, number];
     margin?: number;
+    font?: string;
   }
 
   type PDFTextOptions = {
@@ -11,6 +12,8 @@ declare module 'pdfkit' {
 
   class PDFDocument {
     constructor(options?: PDFDocumentOptions);
+    registerFont(name: string, src: string | Buffer): this;
+    font(name: string, size?: number): this;
     fontSize(size: number): this;
     text(text: string, options?: PDFTextOptions): this;
     moveDown(lines?: number): this;

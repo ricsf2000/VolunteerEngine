@@ -1,17 +1,27 @@
 'use server';
 
+import path from 'node:path';
+
 import PDFDocument from 'pdfkit';
 import { createObjectCsvStringifier } from 'csv-writer';
 
 import { getAllEvents } from '@/app/lib/dal/eventDetails';
 import { getAllHistory } from '@/app/lib/dal/volunteerHistory';
 import { prisma } from '@/app/lib/db';
+import type { ParticipantStatus } from '@/generated/prisma';
+
+const DEFAULT_PDF_FONT_PATH =
+  process.env.DEFAULT_PDF_FONT_PATH ??
+  path.join(
+    process.cwd(),
+    'node_modules/next/dist/compiled/@vercel/og/noto-sans-v27-latin-regular.ttf'
+  );
 
 export interface VolunteerAssignment {
   volunteerId: string;
   volunteerName: string;
   email: string;
-  participantStatus: 'pending' | 'confirmed' | 'cancelled' | 'no_show';
+  participantStatus: ParticipantStatus;
   registrationDate: Date;
 }
 
@@ -126,8 +136,19 @@ function formatDateValue(date: Date) {
 }
 
 async function createPdfBuffer(render: (doc: PDFDocument) => void) {
-  const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
+  const doc = new PDFDocument({
+    size: 'LETTER',
+    margin: 50,
+    font: DEFAULT_PDF_FONT_PATH,
+  });
   const chunks: Buffer[] = [];
+
+  try {
+    doc.registerFont('app-default', DEFAULT_PDF_FONT_PATH);
+    doc.font('app-default');
+  } catch (error) {
+    console.warn('Unable to register custom PDF font, falling back to default.', error);
+  }
 
   const bufferPromise = new Promise<Buffer>((resolve, reject) => {
     doc.on('data', chunk => {
@@ -155,15 +176,17 @@ export async function generateEventReportPDF(): Promise<ServiceResult<GeneratedR
     }
 
     const fileBuffer = await createPdfBuffer(doc => {
+      const events = aggregation.data;
+
       doc.fontSize(20).text('Event Participation Report', { align: 'center' });
       doc.moveDown();
 
-      if (aggregation.data!.length === 0) {
+      if (!events || events.length === 0) {
         doc.fontSize(12).text('No events available.');
         return;
       }
 
-      aggregation.data.forEach(event => {
+      events.forEach(event => {
         doc
           .moveDown(0.5)
           .fontSize(14)
@@ -175,6 +198,7 @@ export async function generateEventReportPDF(): Promise<ServiceResult<GeneratedR
           .fontSize(11)
           .fillColor('#374151')
           .text(`Date: ${formatDateValue(event.eventDate)}`)
+          .text(`Description: ${event.description || 'N/A'}`)
           .text(`Location: ${event.location}`)
           .text(`Urgency: ${event.urgency}`)
           .text(`Required Skills: ${event.requiredSkills.join(', ') || 'N/A'}`)
@@ -230,24 +254,38 @@ export async function generateEventReportCSV(): Promise<ServiceResult<GeneratedR
       header: [
         { id: 'eventName', title: 'Event Name' },
         { id: 'eventDate', title: 'Event Date' },
+        { id: 'eventDescription', title: 'Description' },
         { id: 'location', title: 'Location' },
         { id: 'urgency', title: 'Urgency' },
         { id: 'requiredSkills', title: 'Required Skills' },
-        { id: 'volunteerCount', title: 'Assigned Volunteers' },
+        { id: 'volunteerSummary', title: 'Volunteer Assignments' },
       ],
       alwaysQuote: true,
     });
 
-    const records = aggregation.data.map(event => ({
-      eventName: event.eventName,
-      eventDate: formatDateValue(event.eventDate),
-      location: event.location,
-      urgency: event.urgency,
-      requiredSkills: event.requiredSkills.length
-        ? event.requiredSkills.join('; ')
-        : 'N/A',
-      volunteerCount: event.assignedVolunteers.length,
-    }));
+    const records = aggregation.data.map(event => {
+      const volunteerSummary =
+        event.assignedVolunteers.length === 0
+          ? 'No volunteers assigned'
+          : event.assignedVolunteers
+              .map(volunteer => {
+                const registration = formatDateValue(volunteer.registrationDate);
+                return `${volunteer.volunteerName} (${volunteer.email}) - ${volunteer.participantStatus} on ${registration}`;
+              })
+              .join('; ');
+
+      return {
+        eventName: event.eventName,
+        eventDate: formatDateValue(event.eventDate),
+        eventDescription: event.description,
+        location: event.location,
+        urgency: event.urgency,
+        requiredSkills: event.requiredSkills.length
+          ? event.requiredSkills.join('; ')
+          : 'N/A',
+        volunteerSummary,
+      };
+    });
 
     const csvContent =
       csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(records);
