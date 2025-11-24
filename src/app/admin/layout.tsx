@@ -38,6 +38,9 @@ export default function AdminLayout({
           <SidebarLink href="/admin/volunteer-matching" isActive={isActive("/admin/volunteer-matching")} activeColor="green">
             Volunteer Matching
           </SidebarLink>
+          <SidebarLink href="/admin/report-generation" isActive={isActive("/admin/report-generation")} activeColor="green">
+            Report Generation
+          </SidebarLink>
         </nav>
 
         <div className="flex-grow"></div>        
