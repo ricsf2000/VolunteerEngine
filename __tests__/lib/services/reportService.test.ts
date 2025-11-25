@@ -1,5 +1,6 @@
 import {
   aggregateEventDetailsAndAssignments,
+  aggregateVolunteerParticipationHistory,
   generateEventReportCSV,
   generateEventReportPDF,
   generateVolunteerReportCSV,
@@ -7,6 +8,8 @@ import {
   getReportData,
   EventWithAssignments,
   VolunteerAssignment,
+  VolunteerWithParticipation,
+  EventParticipation,
 } from '@/app/lib/services/reportService';
 import * as eventDetailsDAL from '@/app/lib/dal/eventDetails';
 import * as volunteerHistoryDAL from '@/app/lib/dal/volunteerHistory';
@@ -315,6 +318,252 @@ describe('reportService', () => {
     });
   });
 
+  describe('aggregateVolunteerParticipationHistory', () => {
+    it('should successfully aggregate volunteer participation history', async () => {
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data).toHaveLength(3); // 3 unique volunteers
+    });
+
+    it('should return volunteers sorted by name', async () => {
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      expect(result.data![0].volunteerName).toBe('Jane Smith');
+      expect(result.data![1].volunteerName).toBe('John Doe');
+      expect(result.data![2].volunteerName).toBe('Profile not completed'); // user3
+    });
+
+    it('should include correct volunteer details', async () => {
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const johnDoe = result.data!.find(v => v.volunteerId === 'user1');
+
+      expect(johnDoe).toBeDefined();
+      expect(johnDoe!.volunteerName).toBe('John Doe');
+      expect(johnDoe!.email).toBe('john.doe@example.com');
+      expect(johnDoe!.participationHistory).toHaveLength(1);
+    });
+
+    it('should include participation history with correct event details', async () => {
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const johnDoe = result.data!.find(v => v.volunteerId === 'user1');
+
+      expect(johnDoe).toBeDefined();
+      const participation = johnDoe!.participationHistory[0];
+
+      expect(participation.eventId).toBe('event1');
+      expect(participation.eventName).toBe('Community Cleanup');
+      expect(participation.eventDate).toEqual(new Date('2025-01-15T09:00:00Z'));
+      expect(participation.location).toBe('123 Park St');
+      expect(participation.description).toBe('Help clean up the local park');
+      expect(participation.requiredSkills).toEqual(['Physical Labor', 'Environmental']);
+      expect(participation.urgency).toBe('medium');
+      expect(participation.participantStatus).toBe('confirmed');
+      expect(participation.registrationDate).toEqual(new Date('2024-12-10T12:00:00Z'));
+    });
+
+    it('should handle volunteers without profiles', async () => {
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const user3 = result.data!.find(v => v.volunteerId === 'user3');
+
+      expect(user3).toBeDefined();
+      expect(user3!.volunteerName).toBe('Profile not completed');
+      expect(user3!.email).toBe('bob.johnson@example.com');
+    });
+
+    it('should sort participation history by event date (most recent first)', async () => {
+      // Add more history for user1
+      const extendedHistory = [
+        ...mockVolunteerHistory,
+        {
+          id: 'history4',
+          userId: 'user1',
+          eventId: 'event2',
+          participantStatus: 'confirmed' as const,
+          registrationDate: new Date('2024-12-15T10:00:00Z'),
+          createdAt: new Date('2024-12-15T10:00:00Z'),
+          updatedAt: new Date('2024-12-15T10:00:00Z'),
+        },
+      ];
+
+      mockGetAllHistory.mockResolvedValue(extendedHistory);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const user1 = result.data!.find(v => v.volunteerId === 'user1');
+
+      expect(user1).toBeDefined();
+      expect(user1!.participationHistory).toHaveLength(2);
+
+      // Should be sorted by event date (most recent first)
+      expect(user1!.participationHistory[0].eventId).toBe('event2'); // Jan 20
+      expect(user1!.participationHistory[1].eventId).toBe('event1'); // Jan 15
+    });
+
+    it('should handle volunteers with no participation history', async () => {
+      // Mock with additional user who has no history
+      const additionalUserCredentials = [
+        ...mockUserCredentials,
+        {
+          id: 'user4',
+          email: 'new.user@example.com',
+          profile: {
+            fullName: 'New User',
+          },
+        },
+      ];
+
+      const { prisma } = require('@/app/lib/db');
+      prisma.userCredentials.findMany.mockResolvedValue(additionalUserCredentials);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      // Should only include volunteers who have participation history
+      expect(result.data!.find(v => v.volunteerId === 'user4')).toBeUndefined();
+    });
+
+    it('should handle empty volunteer history', async () => {
+      mockGetAllHistory.mockResolvedValue([]);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual([]);
+    });
+
+    it('should handle empty events list', async () => {
+      mockGetAllEvents.mockResolvedValue([]);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual([]);
+    });
+
+    it('should handle database error from getAllEvents', async () => {
+      mockGetAllEvents.mockRejectedValue(new Error('Database connection failed'));
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to aggregate volunteer participation data');
+      expect(result.data).toBeUndefined();
+    });
+
+    it('should handle database error from getAllHistory', async () => {
+      mockGetAllHistory.mockRejectedValue(new Error('Volunteer history query failed'));
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to aggregate volunteer participation data');
+      expect(result.data).toBeUndefined();
+    });
+
+    it('should handle database error from userCredentials query', async () => {
+      const { prisma } = require('@/app/lib/db');
+      prisma.userCredentials.findMany.mockRejectedValue(new Error('User query failed'));
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to aggregate volunteer participation data');
+      expect(result.data).toBeUndefined();
+    });
+
+    it('should handle missing user in userMap gracefully', async () => {
+      // Mock userCredentials without user2
+      const partialUserCredentials = [
+        {
+          id: 'user1',
+          email: 'john.doe@example.com',
+          profile: { fullName: 'John Doe' },
+        },
+      ];
+
+      const { prisma } = require('@/app/lib/db');
+      prisma.userCredentials.findMany.mockResolvedValue(partialUserCredentials);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const user2 = result.data!.find(v => v.volunteerId === 'user2');
+
+      expect(user2).toBeDefined();
+      expect(user2!.volunteerName).toBe('Profile not completed');
+      expect(user2!.email).toBe('Unknown');
+    });
+
+    it('should include all participant statuses', async () => {
+      // Add more volunteer history with different statuses
+      const extendedVolunteerHistory = [
+        ...mockVolunteerHistory,
+        {
+          id: 'history4',
+          userId: 'user1',
+          eventId: 'event2',
+          participantStatus: 'cancelled' as const,
+          registrationDate: new Date('2024-12-13T10:00:00Z'),
+          createdAt: new Date('2024-12-13T10:00:00Z'),
+          updatedAt: new Date('2024-12-13T10:00:00Z'),
+        },
+      ];
+
+      mockGetAllHistory.mockResolvedValue(extendedVolunteerHistory);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const user1 = result.data!.find(v => v.volunteerId === 'user1');
+
+      expect(user1).toBeDefined();
+      expect(user1!.participationHistory).toHaveLength(2);
+
+      const statuses = user1!.participationHistory.map(p => p.participantStatus);
+      expect(statuses).toContain('confirmed');
+      expect(statuses).toContain('cancelled');
+    });
+
+    it('should skip volunteer history for non-existent events', async () => {
+      // Add history for non-existent event
+      const historyWithInvalidEvent = [
+        ...mockVolunteerHistory,
+        {
+          id: 'history4',
+          userId: 'user1',
+          eventId: 'non-existent-event',
+          participantStatus: 'confirmed' as const,
+          registrationDate: new Date('2024-12-13T10:00:00Z'),
+          createdAt: new Date('2024-12-13T10:00:00Z'),
+          updatedAt: new Date('2024-12-13T10:00:00Z'),
+        },
+      ];
+
+      mockGetAllHistory.mockResolvedValue(historyWithInvalidEvent);
+
+      const result = await aggregateVolunteerParticipationHistory();
+
+      expect(result.success).toBe(true);
+      const user1 = result.data!.find(v => v.volunteerId === 'user1');
+
+      expect(user1).toBeDefined();
+      // Should only have 1 participation (event1), not the non-existent event
+      expect(user1!.participationHistory).toHaveLength(1);
+      expect(user1!.participationHistory[0].eventId).toBe('event1');
+    });
+  });
+
   describe('getReportData', () => {
     it('routes to event aggregation when report type is events', async () => {
       const result = await getReportData('events');
@@ -324,12 +573,12 @@ describe('reportService', () => {
       expect(result!.data!.length).toBeGreaterThan(0);
     });
 
-    it('returns an error when requesting volunteer report data', async () => {
+    it('routes to volunteer aggregation when report type is volunteers', async () => {
       const result = await getReportData('volunteers');
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-      expect(result.data).toBeUndefined();
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result!.data!.length).toBeGreaterThan(0);
     });
   });
 
@@ -405,17 +654,87 @@ describe('reportService', () => {
     });
   });
 
-  describe('volunteer report generators', () => {
-    it('returns an error for volunteer PDF report generation', async () => {
+  describe('generateVolunteerReportPDF', () => {
+    it('creates a PDF report buffer for volunteers', async () => {
       const result = await generateVolunteerReportPDF();
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data!.contentType).toBe('application/pdf');
+      expect(result.data!.fileName).toBe('volunteers-report.pdf');
+      expect(result.data!.fileBuffer.byteLength).toBeGreaterThan(0);
     });
 
-    it('returns an error for volunteer CSV report generation', async () => {
+    it('returns graceful error when aggregation fails', async () => {
+      mockGetAllEvents.mockRejectedValueOnce(new Error('db failure'));
+
+      const result = await generateVolunteerReportPDF();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to aggregate volunteer participation data');
+    });
+
+    it('renders fallback text when no volunteers exist', async () => {
+      mockGetAllHistory.mockResolvedValueOnce([]);
+
+      const result = await generateVolunteerReportPDF();
+      expect(result.success).toBe(true);
+      expect(result.data?.fileBuffer.byteLength).toBeGreaterThan(0);
+    });
+
+    it('handles volunteers with no participation history', async () => {
+      mockGetAllHistory.mockResolvedValueOnce([]);
+
+      const result = await generateVolunteerReportPDF();
+      expect(result.success).toBe(true);
+      expect(result.data?.fileBuffer.byteLength).toBeGreaterThan(0);
+    });
+  });
+
+  describe('generateVolunteerReportCSV', () => {
+    it('creates a CSV report with the expected headers', async () => {
+      const result = await generateVolunteerReportCSV();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data!.contentType).toBe('text/csv');
+      expect(result.data!.fileName).toBe('volunteers-report.csv');
+
+      const csvString = result.data!.fileBuffer.toString('utf-8');
+      expect(csvString).toContain('Volunteer Name');
+      expect(csvString).toContain('Email');
+      expect(csvString).toContain('Total Events');
+      expect(csvString).toContain('Event Participation');
+      expect(csvString).toContain('John Doe');
+      expect(csvString).toContain('john.doe@example.com');
+      expect(csvString).toContain('Community Cleanup');
+    });
+
+    it('returns an error when aggregation fails', async () => {
+      mockGetAllEvents.mockRejectedValueOnce(new Error('db failure'));
+
       const result = await generateVolunteerReportCSV();
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe('Failed to aggregate volunteer participation data');
+    });
+
+    it('adds placeholder rows when no volunteers exist', async () => {
+      mockGetAllHistory.mockResolvedValueOnce([]);
+
+      const result = await generateVolunteerReportCSV();
+
+      expect(result.success).toBe(true);
+      const csvString = result.data!.fileBuffer.toString('utf-8');
+      expect(csvString).toContain('Volunteer Name');
+      expect(csvString).toContain('Email');
+    });
+
+    it('includes participation details in CSV', async () => {
+      const result = await generateVolunteerReportCSV();
+
+      expect(result.success).toBe(true);
+      const csvString = result.data!.fileBuffer.toString('utf-8');
+      expect(csvString).toContain('confirmed');
+      expect(csvString).toContain('123 Park St');
     });
   });
 });
